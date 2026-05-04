@@ -1,6 +1,10 @@
 import proj4 from "proj4";
 import "style.css";
 import { Projection } from "ol/proj";
+import Map from 'ol/Map.js';       
+import OSM from 'ol/source/OSM.js';
+import TileLayer from 'ol/layer/Tile.js';
+import View from 'ol/View.js';
 /* Et autre imports .... */
 
 const extent = [2420000, 1030000, 2900000, 1360000];
