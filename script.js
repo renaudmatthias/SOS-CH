@@ -15,7 +15,8 @@ new ol.Map({
     new ol.layer.Image({
       extent,
       source: new ol.source.ImageWMS({
-        url: "https://wms.geo.admin.ch/?REQUEST=GetCapabilities&SERVICE=WMS&VERSION=1.3.0",,
+        url: "https://sitn.ne.ch/services/wms",
+        params: { LAYERS },
         serverType: "mapserver",
       }),
     }),
