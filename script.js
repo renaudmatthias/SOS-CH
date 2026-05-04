@@ -16,7 +16,7 @@ new ol.Map({
       extent,
       source: new ol.source.ImageWMS({
         url: "https://wms.geo.admin.ch/de/",
-        params: { LAYERS: "ch.vbs.armee-kriegsdenkmaeler" },
+        params: { LAYERS: "ch.swisstopo.landeskarte-farbe-10" },
         serverType: "mapserver",
       }),
     }),
