@@ -15,8 +15,8 @@ new ol.Map({
     new ol.layer.Image({
       extent,
       source: new ol.source.ImageWMS({
-        url: "https://sitn.ne.ch/services/wms",
-        params: { LAYERS: "ag10_surface_agricole_utile" },
+        url: "https://wms.geo.admin.ch/?REQUEST=GetCapabilities&SERVICE=WMS&VERSION=1.3.0",
+        params: { LAYERS: "WMS BGDI" },
         serverType: "mapserver",
       }),
     }),
