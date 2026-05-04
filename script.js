@@ -16,7 +16,7 @@ new ol.Map({
       extent,
       source: new ol.source.ImageWMS({
         url: "https://wms.geo.admin.ch/de",
-        params: { LAYERS: "WMS BGDI" },
+        params: { LAYERS: "BGDI Geodaten" },
         serverType: "mapserver",
       }),
     }),
