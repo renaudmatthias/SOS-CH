@@ -30,7 +30,7 @@ fetch("./police.geojson")
   .then(response => response.json())
   .then(geojson => {
     const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:4326",   // adjust if your GeoJSON uses LV95
+      dataProjection: "EPSG:2056",   // adjust if your GeoJSON uses LV95
       featureProjection: "EPSG:2056",
     });
     map.addLayer(new ol.layer.Vector({
