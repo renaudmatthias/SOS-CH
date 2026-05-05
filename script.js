@@ -23,20 +23,20 @@ const map = new ol.Map({
       }),
     }),
   ],
-  new ol.View({
-  projection,
-  center: [2550000, 1207000],
-  zoom: 5,
-  extent: [2485000, 1075000, 2834000, 1296000], /
-  constrainOnlyCenter: true,
-})
+  view: new ol.View({
+    projection,
+    center: [2550000, 1207000],
+    zoom: 5,
+    extent: [2485000, 1075000, 2834000, 1296000],
+    constrainOnlyCenter: true,
+  }),
 });
 
 fetch("./police.geojson")
   .then(response => response.json())
   .then(geojson => {
     const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:2056",   
+      dataProjection: "EPSG:2056",
       featureProjection: "EPSG:2056",
     });
     map.addLayer(new ol.layer.Vector({
@@ -49,5 +49,19 @@ fetch("./police.geojson")
       }),
     }));
   });
-  
-  
+
+fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissboundaries3d-land-flaeche.fill/1/geometry?geometryFormat=geojson&sr=2056")
+  .then(r => r.json())
+  .then(geojson => {
+    const features = new ol.format.GeoJSON().readFeatures(geojson, {
+      dataProjection: "EPSG:2056",
+      featureProjection: "EPSG:2056",
+    });
+    map.addLayer(new ol.layer.Vector({
+      source: new ol.source.Vector({ features }),
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "blue", width: 2 }),
+        fill: new ol.style.Fill({ color: "rgba(0,0,0,0)" }),
+      }),
+    }));
+  });
