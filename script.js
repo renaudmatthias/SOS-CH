@@ -9,15 +9,16 @@ ol.proj.proj4.register(proj4);
 
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
-// 1. Créer la carte
 const map = new ol.Map({
   target: "map",
   layers: [
-    new ol.layer.Image({
-      extent,
-      source: new ol.source.ImageWMS({
+    new ol.layer.Tile({
+      source: new ol.source.TileWMS({
         url: "https://wms.geo.admin.ch/de/",
-        params: { LAYERS: "ch.swisstopo.landeskarte-farbe-10" },
+        params: {
+          LAYERS: "ch.swisstopo.pixelkarte-farbe",
+          FORMAT: "image/png",
+        },
         serverType: "mapserver",
       }),
     }),
@@ -25,18 +26,20 @@ const map = new ol.Map({
   view: new ol.View({ projection, center: [2550000, 1207000], zoom: 5 }),
 });
 
-// 2. Charger le fichier et ajouter les points
 fetch("./police.geojson")
   .then(response => response.json())
   .then(geojson => {
-    const features = new ol.format.GeoJSON().readFeatures(geojson);
+    const features = new ol.format.GeoJSON().readFeatures(geojson, {
+      dataProjection: "EPSG:4326",   // adjust if your GeoJSON uses LV95
+      featureProjection: "EPSG:2056",
+    });
     map.addLayer(new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
         image: new ol.style.Circle({
           radius: 6,
           fill: new ol.style.Fill({ color: "red" }),
-        })
-      })
+        }),
+      }),
     }));
   });
