@@ -9,7 +9,8 @@ ol.proj.proj4.register(proj4);
 
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
-new ol.Map({
+// 1. Créer la carte
+const map = new ol.Map({
   target: "map",
   layers: [
     new ol.layer.Image({
@@ -23,3 +24,13 @@ new ol.Map({
   ],
   view: new ol.View({ projection, center: [2550000, 1207000], zoom: 5 }),
 });
+
+// 2. Charger le fichier et ajouter les points
+fetch("./police.geojson")
+  .then(response => response.json())
+  .then(geojson => {
+    const features = new ol.format.GeoJSON().readFeatures(geojson);
+    map.addLayer(new ol.layer.Vector({
+      source: new ol.source.Vector({ features })
+    }));
+  });
