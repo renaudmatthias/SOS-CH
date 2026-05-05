@@ -51,11 +51,12 @@ fetch("./police.geojson")
     map.addLayer(pointLayer);
   });
 
-fetch("https://raw.githubusercontent.com/interactivethings/swiss-maps/master/topo/ch.json")
+fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
   .then(r => r.json())
-  .then(geojson => {
-    const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:2056",
+  .then(data => {
+    const switzerland = data.features.find(f => f.properties.ISO_A2 === "CH");
+    const features = new ol.format.GeoJSON().readFeatures(switzerland, {
+      dataProjection: "EPSG:4326",
       featureProjection: "EPSG:2056",
     });
     const switzerlandGeom = features[0].getGeometry();
@@ -83,27 +84,22 @@ fetch("https://raw.githubusercontent.com/interactivethings/swiss-maps/master/top
       ctx.clip();
     };
 
-    const removeClip = (event) => {
-      event.context.restore();
-    };
+    const removeClip = (event) => event.context.restore();
 
-    // Clip sur le WMS
     wmsLayer.on("prerender", applyClip);
     wmsLayer.on("postrender", removeClip);
 
-    // Clip sur les points — attend que pointLayer soit prêt
     const applyClipToPoints = () => {
       if (pointLayer) {
         pointLayer.on("prerender", applyClip);
         pointLayer.on("postrender", removeClip);
         map.render();
       } else {
-        setTimeout(applyClipToPoints, 100); // réessaie si pas encore chargé
+        setTimeout(applyClipToPoints, 100);
       }
     };
     applyClipToPoints();
 
-    // Contour visible par dessus
     map.addLayer(new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
