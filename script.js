@@ -41,7 +41,7 @@ const map = new ol.Map({
   })
 });
 
-// --- CLIPPING WMTS AVEC FRONTIÈRE SUISSE ---
+// --- Masque : tout sauf la Suisse ---
 fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
   .then(r => r.json())
   .then(data => {
@@ -54,49 +54,41 @@ fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/coun
 
     const swissGeom = features[0].getGeometry();
 
-    // --- Fonction de clipping ---
-    const clip = (event) => {
-      const ctx = event.context;
-      const ratio = event.frameState.pixelRatio;
+    // --- Grand polygone couvrant toute la Suisse ---
+    const worldExtent = [2420000, 1030000, 2900000, 1360000];
+    const worldPoly = ol.geom.Polygon.fromExtent(worldExtent);
 
-      ctx.save();
-      ctx.beginPath();
+    // --- Polygone avec trou = Suisse ---
+    const maskGeom = new ol.geom.Polygon(worldPoly.getCoordinates());
 
-      const drawPoly = (poly) => {
-        const rings = poly.getCoordinates();
-        rings.forEach(ring => {
-          ring.forEach((coord, i) => {
-            const p = map.getPixelFromCoordinate(coord);
-            if (i === 0) ctx.moveTo(p[0] * ratio, p[1] * ratio);
-            else ctx.lineTo(p[0] * ratio, p[1] * ratio);
-          });
-          ctx.closePath();
-        });
-      };
+    let outerRing;
+    if (swissGeom.getType() === "Polygon") {
+      outerRing = swissGeom.getLinearRing(0).getCoordinates();
+    } else {
+      outerRing = swissGeom.getPolygons()[0].getLinearRing(0).getCoordinates();
+    }
 
-      if (swissGeom.getType() === "MultiPolygon") {
-        swissGeom.getPolygons().forEach(drawPoly);
-      } else {
-        drawPoly(swissGeom);
-      }
+    maskGeom.appendLinearRing(outerRing);
 
-      ctx.clip();
-    };
+    const maskFeature = new ol.Feature(maskGeom);
 
-    const unclip = (event) => event.context.restore();
+    const maskLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({ features: [maskFeature] }),
+      style: new ol.style.Style({
+        fill: new ol.style.Fill({
+          color: "white" // même couleur que le fond → on ne voit que la Suisse
+        })
+      })
+    });
 
-    // --- Appliquer clipping au WMTS ---
-    wmtsLayer.on("prerender", clip);
-    wmtsLayer.on("postrender", unclip);
-
-    map.render();
+    map.addLayer(maskLayer);
 
     // --- Contour Suisse ---
     map.addLayer(
       new ol.layer.Vector({
         source: new ol.source.Vector({ features }),
         style: new ol.style.Style({
-          stroke: new ol.style.Stroke({ color: "blue", width: 2 }),
+          stroke: new ol.style.Stroke({ color: "black", width: 2 }),
           fill: null
         })
       })
