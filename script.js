@@ -31,6 +31,12 @@ fetch("./police.geojson")
   .then(geojson => {
     const features = new ol.format.GeoJSON().readFeatures(geojson);
     map.addLayer(new ol.layer.Vector({
-      source: new ol.source.Vector({ features })
+      source: new ol.source.Vector({ features }),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6,
+          fill: new ol.style.Fill({ color: "red" }),
+        })
+      })
     }));
   });
