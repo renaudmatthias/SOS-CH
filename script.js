@@ -1,12 +1,10 @@
 const extent = [2420000, 1030000, 2900000, 1360000];
-
 proj4.defs(
   "EPSG:2056",
   "+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=2600000" +
   " +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs"
 );
 ol.proj.proj4.register(proj4);
-
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
 const map = new ol.Map({
@@ -57,6 +55,27 @@ fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissb
       dataProjection: "EPSG:2056",
       featureProjection: "EPSG:2056",
     });
+    const switzerlandGeom = features[0].getGeometry();
+    const wmsLayer = map.getLayers().item(0);
+
+    wmsLayer.on("prerender", (event) => {
+      const ctx = event.context;
+      const pixelRatio = event.frameState.pixelRatio;
+      ctx.save();
+      ctx.beginPath();
+      switzerlandGeom.getCoordinates()[0].forEach((coords, i) => {
+        const pixel = map.getPixelFromCoordinate(coords);
+        if (i === 0) ctx.moveTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
+        else ctx.lineTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
+      });
+      ctx.closePath();
+      ctx.clip();
+    });
+
+    wmsLayer.on("postrender", (event) => {
+      event.context.restore();
+    });
+
     map.addLayer(new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
