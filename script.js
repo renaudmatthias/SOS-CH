@@ -12,10 +12,10 @@ const projection = new ol.proj.Projection({
   extent: [2400000, 1000000, 3000000, 1500000]
 });
 
-// --- Carte WMTS Swisstopo ---
+// --- Carte WMTS Swisstopo (URL correcte) ---
 const wmtsLayer = new ol.layer.Tile({
   source: new ol.source.WMTS({
-    url: "https://wmts.geo.admin.ch/1.0.0/{Layer}/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.jpeg",
+    url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.jpeg",
     layer: "ch.swisstopo.pixelkarte-farbe",
     matrixSet: "2056",
     format: "image/jpeg",
