@@ -39,7 +39,7 @@ fetch("./police.geojson")
       dataProjection: "EPSG:2056",
       featureProjection: "EPSG:2056",
     });
-    pointLayer = new ol.layer.Vector({
+    policeLayer = new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
         image: new ol.style.Circle({
@@ -48,7 +48,7 @@ fetch("./police.geojson")
         }),
       }),
     });
-    map.addLayer(pointLayer);
+    map.addLayer(policeLayer);
   });
 fetch("./fire_station.geojson")
   .then(response => response.json())
@@ -57,7 +57,7 @@ fetch("./fire_station.geojson")
       dataProjection: "EPSG:2056",
       featureProjection: "EPSG:2056",
     });
-    pointLayer = new ol.layer.Vector({
+    fireLayer = new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
         image: new ol.style.Circle({
@@ -66,5 +66,5 @@ fetch("./fire_station.geojson")
         }),
       }),
     });
-    map.addLayer(pointLayer);
+    map.addLayer(fireLayer);
   });
