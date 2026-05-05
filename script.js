@@ -9,10 +9,10 @@ ol.proj.proj4.register(proj4);
 
 const projection = new ol.proj.Projection({
   code: "EPSG:2056",
-  extent: [2420000, 1030000, 2900000, 1360000]
+  extent: [2400000, 1000000, 3000000, 1500000]
 });
 
-// --- Carte WMTS ---
+// --- Carte WMTS Swisstopo ---
 const wmtsLayer = new ol.layer.Tile({
   source: new ol.source.WMTS({
     url: "https://wmts.geo.admin.ch/1.0.0/{Layer}/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.jpeg",
@@ -31,6 +31,7 @@ const wmtsLayer = new ol.layer.Tile({
   })
 });
 
+// --- Carte ---
 const map = new ol.Map({
   target: "map",
   layers: [wmtsLayer],
@@ -41,7 +42,7 @@ const map = new ol.Map({
   })
 });
 
-// --- Masque : tout sauf la Suisse ---
+// --- Charger la Suisse ---
 fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
   .then(r => r.json())
   .then(data => {
@@ -54,44 +55,51 @@ fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/coun
 
     const swissGeom = features[0].getGeometry();
 
-    // --- Grand polygone couvrant toute la Suisse ---
-    const worldExtent = [2420000, 1030000, 2900000, 1360000];
-    const worldPoly = ol.geom.Polygon.fromExtent(worldExtent);
-
-    // --- Polygone avec trou = Suisse ---
-    const maskGeom = new ol.geom.Polygon(worldPoly.getCoordinates());
-
-    let outerRing;
-    if (swissGeom.getType() === "Polygon") {
-      outerRing = swissGeom.getLinearRing(0).getCoordinates();
-    } else {
-      outerRing = swissGeom.getPolygons()[0].getLinearRing(0).getCoordinates();
-    }
-
-    maskGeom.appendLinearRing(outerRing);
-
-    const maskFeature = new ol.Feature(maskGeom);
-
-    const maskLayer = new ol.layer.Vector({
-      source: new ol.source.Vector({ features: [maskFeature] }),
+    // --- Couche contour Suisse ---
+    const borderLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: "white" // même couleur que le fond → on ne voit que la Suisse
-        })
+        stroke: new ol.style.Stroke({ color: "black", width: 2 }),
+        fill: null
+      })
+    });
+    map.addLayer(borderLayer);
+
+    // --- Couche masque (canvas renderer) ---
+    const maskLayer = new ol.layer.Vector({
+      source: new ol.source.Vector(),
+      style: new ol.style.Style({
+        renderer: (pixelCoords, state) => {
+          const ctx = state.context;
+          ctx.save();
+
+          // Remplir tout l'écran en blanc
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+          // Découper la Suisse
+          ctx.globalCompositeOperation = "destination-out";
+
+          const geom = swissGeom.clone();
+          geom.transform("EPSG:2056", state.coordinateToPixelTransform);
+
+          const flat = geom.getFlatCoordinates();
+          const stride = geom.getStride();
+
+          ctx.beginPath();
+          for (let i = 0; i < flat.length; i += stride) {
+            const x = flat[i];
+            const y = flat[i + 1];
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+        }
       })
     });
 
     map.addLayer(maskLayer);
-
-    // --- Contour Suisse ---
-    map.addLayer(
-      new ol.layer.Vector({
-        source: new ol.source.Vector({ features }),
-        style: new ol.style.Style({
-          stroke: new ol.style.Stroke({ color: "black", width: 2 }),
-          fill: null
-        })
-      })
-    );
   });
-
