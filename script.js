@@ -63,12 +63,21 @@ fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissb
       const pixelRatio = event.frameState.pixelRatio;
       ctx.save();
       ctx.beginPath();
-      switzerlandGeom.getCoordinates()[0].forEach((coords, i) => {
-        const pixel = map.getPixelFromCoordinate(coords);
-        if (i === 0) ctx.moveTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
-        else ctx.lineTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
+
+      const geomType = switzerlandGeom.getType();
+      const polygons = geomType === "MultiPolygon"
+        ? switzerlandGeom.getPolygons()
+        : [switzerlandGeom];
+
+      polygons.forEach(polygon => {
+        polygon.getCoordinates()[0].forEach((coords, i) => {
+          const pixel = map.getPixelFromCoordinate(coords);
+          if (i === 0) ctx.moveTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
+          else ctx.lineTo(pixel[0] * pixelRatio, pixel[1] * pixelRatio);
+        });
+        ctx.closePath();
       });
-      ctx.closePath();
+
       ctx.clip();
     });
 
