@@ -26,8 +26,8 @@ const map = new ol.Map({
   view: new ol.View({
     projection,
     center: [2550000, 1207000],
-    zoom: 5,
-    minZoom: 5,
+    zoom: 10,
+    minZoom: 10,
     extent: [2485000, 1075000, 2834000, 1296000],
     constrainOnlyCenter: true,
   }),
