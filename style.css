@@ -5,9 +5,20 @@ body {
   background: white;
 }
  
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+ 
+header {
+  flex-shrink: 0;
+}
+ 
 #map {
+  flex: 1;
   width: 100%;
-  height: calc(100vh - 80px);
+  min-height: 0;
   border-radius: 8px;
   border: 1px solid #dee2e6;
 }
