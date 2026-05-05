@@ -51,7 +51,7 @@ fetch("./police.geojson")
     map.addLayer(pointLayer);
   });
 
-fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissboundaries3d-land-flaeche.fill/1/geometry?geometryFormat=geojson&sr=2056")
+fetch("https://raw.githubusercontent.com/interactivethings/swiss-maps/master/topo/ch.json")
   .then(r => r.json())
   .then(geojson => {
     const features = new ol.format.GeoJSON().readFeatures(geojson, {
