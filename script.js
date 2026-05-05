@@ -29,10 +29,7 @@ const map = new ol.Map({
             4000, 3750, 3500, 3250, 3000, 2750, 2500, 2250, 2000,
             1750, 1500, 1250, 1000, 750, 650, 500, 250, 100, 50, 20, 10, 5, 2.5
           ],
-          matrixIds: [
-            "0","1","2","3","4","5","6","7","8","9","10","11",
-            "12","13","14","15","16","17","18","19","20","21","22"
-          ]
+          matrixIds: Array.from({ length: 23 }, (_, i) => i.toString())
         })
       })
     })
@@ -44,7 +41,7 @@ const map = new ol.Map({
   })
 });
 
-// --- Masque vectoriel pour clipper la Suisse ---
+// --- Masque Suisse (sans rectangle visible) ---
 fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
   .then(r => r.json())
   .then(data => {
@@ -57,26 +54,50 @@ fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/coun
 
     const swissGeom = features[0].getGeometry();
 
-    // --- Grand rectangle couvrant toute la Suisse ---
-    const worldExtent = [2420000, 1030000, 2900000, 1360000];
-    const worldPoly = ol.geom.Polygon.fromExtent(worldExtent);
-
-    // --- Création du masque avec trou ---
-    const maskGeom = new ol.geom.Polygon(worldPoly.getCoordinates());
-    maskGeom.appendLinearRing(swissGeom.getLinearRing(0)); // trou = Suisse
-
-    const maskFeature = new ol.Feature(maskGeom);
-
-    const maskLayer = new ol.layer.Vector({
-      source: new ol.source.Vector({ features: [maskFeature] }),
-      style: new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: "rgba(0,0,0,0.6)" // zone hors Suisse
-        })
+    // --- Style spécial : n'affiche que la Suisse ---
+    const clipStyle = new ol.style.Style({
+      fill: new ol.style.Fill({
+        color: "rgba(255,255,255,1)" // opaque → masque
       })
     });
 
-    map.addLayer(maskLayer);
+    const clipLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({ features }),
+      style: clipStyle
+    });
+
+    clipLayer.on("prerender", (e) => {
+      const ctx = e.context;
+      const ratio = e.frameState.pixelRatio;
+
+      ctx.save();
+      ctx.beginPath();
+
+      // On dessine TOUT l'écran
+      ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      // On découpe la Suisse
+      const coords = swissGeom.getCoordinates()[0];
+      ctx.moveTo(
+        ...map.getPixelFromCoordinate(coords[0]).map(v => v * ratio)
+      );
+
+      coords.forEach((c) => {
+        const p = map.getPixelFromCoordinate(c);
+        ctx.lineTo(p[0] * ratio, p[1] * ratio);
+      });
+
+      ctx.closePath();
+
+      // On inverse le masque → seule la Suisse reste visible
+      ctx.clip("evenodd");
+    });
+
+    clipLayer.on("postrender", (e) => {
+      e.context.restore();
+    });
+
+    map.addLayer(clipLayer);
 
     // --- Contour Suisse ---
     map.addLayer(
@@ -84,7 +105,7 @@ fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/coun
         source: new ol.source.Vector({ features }),
         style: new ol.style.Style({
           stroke: new ol.style.Stroke({ color: "blue", width: 2 }),
-          fill: new ol.style.Fill({ color: "rgba(0,0,0,0)" })
+          fill: null
         })
       })
     );
