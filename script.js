@@ -7,6 +7,8 @@ proj4.defs(
 ol.proj.proj4.register(proj4);
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
+let pointLayer;
+
 const map = new ol.Map({
   target: "map",
   layers: [
@@ -37,7 +39,7 @@ fetch("./police.geojson")
       dataProjection: "EPSG:2056",
       featureProjection: "EPSG:2056",
     });
-    map.addLayer(new ol.layer.Vector({
+    pointLayer = new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
         image: new ol.style.Circle({
@@ -45,7 +47,8 @@ fetch("./police.geojson")
           fill: new ol.style.Fill({ color: "red" }),
         }),
       }),
-    }));
+    });
+    map.addLayer(pointLayer);
   });
 
 fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissboundaries3d-land-flaeche.fill/1/geometry?geometryFormat=geojson&sr=2056")
@@ -58,14 +61,13 @@ fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissb
     const switzerlandGeom = features[0].getGeometry();
     const wmsLayer = map.getLayers().item(0);
 
-    wmsLayer.on("prerender", (event) => {
+    const applyClip = (event) => {
       const ctx = event.context;
       const pixelRatio = event.frameState.pixelRatio;
       ctx.save();
       ctx.beginPath();
 
-      const geomType = switzerlandGeom.getType();
-      const polygons = geomType === "MultiPolygon"
+      const polygons = switzerlandGeom.getType() === "MultiPolygon"
         ? switzerlandGeom.getPolygons()
         : [switzerlandGeom];
 
@@ -79,12 +81,29 @@ fetch("https://api3.geo.admin.ch/rest/services/api/MapServer/ch.swisstopo.swissb
       });
 
       ctx.clip();
-    });
+    };
 
-    wmsLayer.on("postrender", (event) => {
+    const removeClip = (event) => {
       event.context.restore();
-    });
+    };
 
+    // Clip sur le WMS
+    wmsLayer.on("prerender", applyClip);
+    wmsLayer.on("postrender", removeClip);
+
+    // Clip sur les points — attend que pointLayer soit prêt
+    const applyClipToPoints = () => {
+      if (pointLayer) {
+        pointLayer.on("prerender", applyClip);
+        pointLayer.on("postrender", removeClip);
+        map.render();
+      } else {
+        setTimeout(applyClipToPoints, 100); // réessaie si pas encore chargé
+      }
+    };
+    applyClipToPoints();
+
+    // Contour visible par dessus
     map.addLayer(new ol.layer.Vector({
       source: new ol.source.Vector({ features }),
       style: new ol.style.Style({
