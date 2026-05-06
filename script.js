@@ -89,4 +89,4 @@ function loadGeoJSON(url, style) {
 loadGeoJSON("./police.geojson", redStyle);        // rouge
 loadGeoJSON("./fire_station.geojson", blueStyle); // bleu
 loadGeoJSON("./police_v2.geojson", greenStyle);   // vert
-loadGeoJSON("./hospital.geojson", yellowStyle);   // jaune
+loadGeoJSON("./hospital.geojson", redStyle);   // jaune
