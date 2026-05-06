@@ -22,6 +22,16 @@ const map = new ol.Map({
         serverType: "mapserver",
       }),
     }),
+	new ol.layer.Tile({
+		source: new o.source.TileWMS({
+			url: "https://wms.geo.admin.ch/de/",
+			params:{
+				LAYERS: "ch.bazl.spitallandeplaetze",
+				
+			},
+			serverType: "mapserver",
+		}),
+	}),
   ],
   view: new ol.View({
     projection,
