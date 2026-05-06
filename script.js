@@ -17,22 +17,21 @@ const map = new ol.Map({
   target: "map",
   layers: [
     // Carte de base swisstopo en WMTS (plus rapide que WMS)
-    new ol.layer.Tile({
-      source: new ol.source.WMTS({
-        url: "https://wmts.geo.admin.ch/1.0.0/{Layer}/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
-        layer: "ch.swisstopo.pixelkarte-farbe",
-        matrixSet: "2056",
-        format: "image/png",
-        projection: projection,
-        tileGrid: new ol.tilegrid.WMTS({
-          origin: [2420000, 1350000],
-          resolutions,
-          matrixIds,
-        }),
-        style: "default",
-        crossOrigin: "anonymous",
-      }),
-    }),
+    new ol.source.WMTS({
+  url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
+  layer: "ch.swisstopo.pixelkarte-farbe",
+  matrixSet: "2056",
+  format: "image/png",
+  projection: projection,
+  tileGrid: new ol.tilegrid.WMTS({
+    origin: [2420000, 1350000],
+    resolutions,
+    matrixIds,
+  }),
+  style: "default",
+  crossOrigin: "anonymous",
+  requestEncoding: "REST",  // ← ajoute cette ligne
+}),
     // Couche héliports en WMS (pas disponible en WMTS)
     new ol.layer.Tile({
       source: new ol.source.TileWMS({
