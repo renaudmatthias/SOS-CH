@@ -23,7 +23,7 @@ const map = new ol.Map({
       }),
     }),
 	new ol.layer.Tile({
-		source: new o.source.TileWMS({
+		source: new ol.source.TileWMS({
 			url: "https://wms.geo.admin.ch/de/",
 			params:{
 				LAYERS: "ch.bazl.spitallandeplaetze",
