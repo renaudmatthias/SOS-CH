@@ -11,25 +11,22 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+  <div class="d-flex flex-column" style="height: 100vh;">
+    
+    <header class="d-flex flex-wrap justify-content-center py-3 mb-0 border-bottom px-3">
       <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-        <span class="fs-4">Simple header</span>
+        <img src="Logo.png" alt="SOS-CH", width="50" height="40" class="me-2">
       </a>
       <ul class="nav nav-pills">
-        <li class="nav-item"><a href="#" class="nav-link active" aria-current="page">Home</a></li>
+        <li class="nav-item"><a href="#" class="nav-link active">Home</a></li>
         <li class="nav-item"><a href="#" class="nav-link">Features</a></li>
-        <li class="nav-item"><a href="#" class="nav-link">Pricing</a></li>
-        <li class="nav-item"><a href="#" class="nav-link">FAQs</a></li>
-        <li class="nav-item"><a href="#" class="nav-link">About</a></li>
       </ul>
     </header>
 
-    <!-- Carte dans le cadre Bootstrap -->
-    <div id="map"></div>
+    <!-- flex-grow-1 fait que la carte prend tout l'espace restant -->
+    <div id="map" class="flex-grow-1"></div>
 
   </div>
-
   <script src="script.js"></script>
 </body>
 </html>
