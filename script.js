@@ -80,3 +80,22 @@ fetch("./fire_station.geojson")
     });
     map.addLayer(fireLayer);
   });
+  
+fetch("./police_v2.geojson")
+  .then(response => response.json())
+  .then(geojson => {
+    const features = new ol.format.GeoJSON().readFeatures(geojson, {
+      dataProjection: "EPSG:2056",
+      featureProjection: "EPSG:2056",
+    });
+    police2Layer = new ol.layer.Vector({
+      source: new ol.source.Vector({ features }),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6,
+          fill: new ol.style.Fill({ color: "green" }),
+        }),
+      }),
+    });
+    map.addLayer(police2Layer);
+  });
