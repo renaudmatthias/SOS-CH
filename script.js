@@ -7,8 +7,6 @@ proj4.defs(
 ol.proj.proj4.register(proj4);
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
-let pointLayer;
-
 const map = new ol.Map({
   target: "map",
   layers: [
@@ -43,59 +41,51 @@ const map = new ol.Map({
   }),
 });
 
-fetch("./police.geojson")
-  .then(response => response.json())
-  .then(geojson => {
-    const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:2056",
-      featureProjection: "EPSG:2056",
-    });
-    policeLayer = new ol.layer.Vector({
-      source: new ol.source.Vector({ features }),
-      style: new ol.style.Style({
-        image: new ol.style.Circle({
-          radius: 6,
-          fill: new ol.style.Fill({ color: "red" }),
-        }),
-      }),
-    });
-    map.addLayer(policeLayer);
-  });
+// --- Styles ---
+const redStyle = new ol.style.Style({
+  image: new ol.style.Circle({
+    radius: 6,
+    fill: new ol.style.Fill({ color: "red" }),
+    stroke: new ol.style.Stroke({ color: "white", width: 2 })
+  }),
+});
 
-fetch("./fire_station.geojson")
-  .then(response => response.json())
-  .then(geojson => {
-    const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:2056",
-      featureProjection: "EPSG:2056",
+const blueStyle = new ol.style.Style({
+  image: new ol.style.Circle({
+    radius: 6,
+    fill: new ol.style.Fill({ color: "blue" }),
+    stroke: new ol.style.Stroke({ color: "white", width: 2 })
+  }),
+});
+
+const greenStyle = new ol.style.Style({
+  image: new ol.style.Circle({
+    radius: 6,
+    fill: new ol.style.Fill({ color: "green" }),
+    stroke: new ol.style.Stroke({ color: "white", width: 2 })
+  }),
+});
+
+// --- Fonction générique ---
+function loadGeoJSON(url, style) {
+  fetch(url)
+    .then(response => response.json())
+    .then(geojson => {
+      const features = new ol.format.GeoJSON().readFeatures(geojson, {
+        dataProjection: "EPSG:2056",
+        featureProjection: "EPSG:2056",
+      });
+
+      const layer = new ol.layer.Vector({
+        source: new ol.source.Vector({ features }),
+        style: style,
+      });
+
+      map.addLayer(layer);
     });
-    fireLayer = new ol.layer.Vector({
-      source: new ol.source.Vector({ features }),
-      style: new ol.style.Style({
-        image: new ol.style.Circle({
-          radius: 6,
-          fill: new ol.style.Fill({ color: "blue" }),
-        }),
-      }),
-    });
-    map.addLayer(fireLayer);
-  });
-  
-fetch("./police_v2.geojson")
-  .then(response => response.json())
-  .then(geojson => {
-    const features = new ol.format.GeoJSON().readFeatures(geojson, {
-      dataProjection: "EPSG:2056",
-      featureProjection: "EPSG:2056",
-    });
-    police2Layer = new ol.layer.Vector({
-      source: new ol.source.Vector({ features }),
-      style: new ol.style.Style({
-        image: new ol.style.Circle({
-          radius: 6,
-          fill: new ol.style.Fill({ color: "green" }),
-        }),
-      }),
-    });
-    map.addLayer(police2Layer);
-  });
+}
+
+// --- Chargement des 3 couches avec couleurs différentes ---
+loadGeoJSON("./police.geojson", redStyle);        // rouge
+loadGeoJSON("./fire_station.geojson", blueStyle); // bleu
+loadGeoJSON("./police_v2.geojson", greenStyle);   // vert
