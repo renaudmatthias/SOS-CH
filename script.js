@@ -7,16 +7,14 @@ proj4.defs(
 ol.proj.proj4.register(proj4);
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
-// Matrice de tuiles WMTS pour EPSG:2056
 const resolutions = [4000, 3750, 3500, 3250, 3000, 2750, 2500, 2250, 2000, 1750, 1500, 1250, 1000, 750, 650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1, 0.5];
-const matrixIds = resolutions.map((_, i) => i.toString());
+const matrixIds = Array.from({length: 27}, (_, i) => i.toString());
 
 let pointLayer;
 
 const map = new ol.Map({
   target: "map",
   layers: [
-    // Carte de base swisstopo en WMTS (plus rapide que WMS)
     new ol.layer.Tile({
       source: new ol.source.WMTS({
         url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
@@ -28,13 +26,13 @@ const map = new ol.Map({
           origin: [2420000, 1350000],
           resolutions,
           matrixIds,
+          tileSize: 256,
         }),
         style: "default",
         crossOrigin: "anonymous",
         requestEncoding: "REST",
       }),
     }),
-    // Couche héliports en WMS (pas disponible en WMTS)
     new ol.layer.Tile({
       source: new ol.source.TileWMS({
         url: "https://wms.geo.admin.ch/de/",
