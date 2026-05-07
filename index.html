@@ -27,6 +27,16 @@
     <!-- La carte prend tout l'espace restant -->
     <div id="map" class="flex-grow-1">
 
+      <!-- Barre de recherche -->
+      <div id="search-bar">
+        <div id="search-input-wrap">
+          <span id="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Rechercher une adresse en Suisse…" autocomplete="off" />
+          <button id="search-clear" title="Effacer">×</button>
+        </div>
+        <ul id="search-results"></ul>
+      </div>
+
       <!-- Légende -->
       <div id="map-legend">
         <div class="legend-item">
