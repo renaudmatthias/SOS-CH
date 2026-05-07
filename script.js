@@ -292,7 +292,7 @@ function goToResult(item) {
         radius: 10,
         radius2: 0,
         angle: Math.PI / 4,
-        fill: new ol.style.Fill({ color: "#f97316" }),
+        fill: new ol.style.Fill({ color: "red" }),
         stroke: new ol.style.Stroke({ color: "red", width: 4 }),
       }),
     })
