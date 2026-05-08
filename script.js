@@ -11,20 +11,14 @@ const map = new ol.Map({
   target: "map",
   layers: [
     new ol.layer.Tile({
-      source: new ol.source.TileWMS({
-        url: "https://wms.geo.admin.ch/de/",
-        params: { LAYERS: "ch.swisstopo.pixelkarte-farbe", FORMAT: "image/png" },
-        serverType: "mapserver",
-      }),
+      source: new ol.source.OSM(), // ← remplace le WMS swisstopo
     }),
   ],
   view: new ol.View({
-    projection,
-    center: [2660000, 1190000],
-    zoom: 2,
-    minZoom: 2,
-    extent: [2485000, 1075000, 2834000, 1296000],
-    constrainOnlyCenter: true,
+    projection: "EPSG:3857", // OSM utilise Web Mercator
+    center: ol.proj.fromLonLat([8.23, 46.82]),
+    zoom: 8,
+    minZoom: 7,
   }),
 });
 
@@ -87,7 +81,6 @@ map.on("singleclick", (e) => {
 
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
     if (found) return;
-    // Ignorer le marqueur de recherche
     if (layer === searchMarkerLayer) return;
     found = true;
 
@@ -135,13 +128,14 @@ function formatKey(key) {
 }
 
 // ── Chargement des couches GeoJSON ──
+// Vos GeoJSON sont en EPSG:2056, il faut les reprojeter vers EPSG:3857
 function loadGeoJSON(url, style, color) {
   fetch(url)
     .then((res) => res.json())
     .then((geojson) => {
       const features = new ol.format.GeoJSON().readFeatures(geojson, {
         dataProjection: "EPSG:2056",
-        featureProjection: "EPSG:2056",
+        featureProjection: "EPSG:3857", // ← reprojection vers Web Mercator
       });
       const layer = new ol.layer.Vector({ source: new ol.source.Vector({ features }), style });
       layer.set("poiColor", color);
@@ -162,7 +156,6 @@ const searchResults = document.getElementById("search-results");
 let searchMarkerLayer = null;
 let searchDebounce    = null;
 
-// Affiche/masque le bouton effacer
 searchInput.addEventListener("input", () => {
   searchClear.style.display = searchInput.value.length > 0 ? "flex" : "none";
   clearTimeout(searchDebounce);
@@ -178,16 +171,13 @@ searchInput.addEventListener("keydown", (e) => {
     clearTimeout(searchDebounce);
     searchAddress(searchInput.value);
   }
-  if (e.key === "Escape") {
-    closeSearch();
-  }
+  if (e.key === "Escape") closeSearch();
 });
 
 searchClear.addEventListener("click", () => {
   searchInput.value = "";
   searchClear.style.display = "none";
   searchResults.style.display = "none";
-  // Supprime le marqueur
   if (searchMarkerLayer) {
     map.removeLayer(searchMarkerLayer);
     searchMarkerLayer = null;
@@ -197,8 +187,6 @@ searchClear.addEventListener("click", () => {
 
 async function searchAddress(query) {
   if (!query.trim()) return;
-
-  // Indicateur de chargement
   searchResults.innerHTML = "<li class='search-loading'>Recherche…</li>";
   searchResults.style.display = "block";
 
@@ -217,9 +205,7 @@ async function searchAddress(query) {
 
     data.forEach(item => {
       const li = document.createElement("li");
-
-      // Icône selon le type
-      const icon = getResultIcon(item.type, item.class);
+      const icon     = getResultIcon(item.type, item.class);
       const mainText = formatMainText(item);
       const subText  = formatSubText(item);
 
@@ -230,7 +216,6 @@ async function searchAddress(query) {
           ${subText ? `<span class="result-sub">${subText}</span>` : ""}
         </span>
       `;
-
       li.addEventListener("click", () => {
         goToResult(item);
         searchResults.style.display = "none";
@@ -273,17 +258,11 @@ function formatSubText(item) {
 }
 
 function goToResult(item) {
-  // Convertit WGS84 → EPSG:2056
-  const coords = ol.proj.transform(
-    [parseFloat(item.lon), parseFloat(item.lat)],
-    "EPSG:4326",
-    "EPSG:2056"
-  );
+  // Convertit WGS84 → EPSG:3857
+  const coords = ol.proj.fromLonLat([parseFloat(item.lon), parseFloat(item.lat)]);
 
-  // Supprime l'ancien marqueur
   if (searchMarkerLayer) map.removeLayer(searchMarkerLayer);
 
-  // Crée le marqueur (épingle orange)
   const marker = new ol.Feature({ geometry: new ol.geom.Point(coords) });
   marker.setStyle(
     new ol.style.Style({
@@ -292,8 +271,8 @@ function goToResult(item) {
         radius: 10,
         radius2: 0,
         angle: Math.PI / 4,
-        fill: new ol.style.Fill({ color: "red" }),
-        stroke: new ol.style.Stroke({ color: "red", width: 4 }),
+        fill: new ol.style.Fill({ color: "orange" }),
+        stroke: new ol.style.Stroke({ color: "white", width: 2 }),
       }),
     })
   );
@@ -304,15 +283,13 @@ function goToResult(item) {
   });
   map.addLayer(searchMarkerLayer);
 
-  // Zoom animé
-  map.getView().animate({ center: coords, zoom: 7, duration: 700 });
+  map.getView().animate({ center: coords, zoom: 14, duration: 700 });
 }
 
 function closeSearch() {
   searchResults.style.display = "none";
 }
 
-// Ferme les résultats si clic ailleurs
 document.addEventListener("click", (e) => {
   if (!e.target.closest("#search-bar")) closeSearch();
 });
