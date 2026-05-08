@@ -13,14 +13,15 @@ const resolutions = [
   1500, 1250, 1000, 750, 650, 500, 250, 100, 50, 20, 10, 5, 2.5,
   2, 1.5, 1, 0.5, 0.25, 0.1,
 ];
-const matrixIds = resolutions.map((_, i) => i);
+const matrixIds = resolutions.map((_, i) => String(i));
 
 const swisstopoWMTS = new ol.source.WMTS({
-  url: "https://wmts.geo.admin.ch/1.0.0/{Layer}/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
+  url: "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
   layer: "ch.swisstopo.pixelkarte-farbe",
   matrixSet: "2056",
   format: "image/png",
   projection,
+  requestEncoding: "REST",
   tileGrid: new ol.tilegrid.WMTS({
     origin: [2420000, 1350000],
     resolutions,
@@ -194,16 +195,11 @@ coordStyle.textContent = `
 `;
 document.head.appendChild(coordStyle);
 
-// Croix centrale (indicateur visuel quand l'outil est actif)
-const crosshair = document.createElement("div");
-crosshair.id = "coord-crosshair";
-crosshair.textContent = "✛";
-document.getElementById("map").appendChild(crosshair);
+
 
 coordBtn.addEventListener("click", () => {
   coordToolActive = !coordToolActive;
   coordBtn.classList.toggle("active", coordToolActive);
-  crosshair.style.display = coordToolActive ? "block" : "none";
   if (!coordToolActive) coordPanel.style.display = "none";
 });
 
@@ -211,7 +207,6 @@ document.getElementById("coord-close").addEventListener("click", () => {
   coordPanel.style.display = "none";
   coordToolActive = false;
   coordBtn.classList.remove("active");
-  crosshair.style.display = "none";
 });
 
 document.getElementById("coord-copy").addEventListener("click", () => {
