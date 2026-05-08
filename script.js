@@ -94,13 +94,157 @@ function closePanel() {
 
 btnClose.addEventListener("click", closePanel);
 
+// ── Outil coordonnées ──
+let coordToolActive = false;
+
+const coordBtn = document.createElement("button");
+coordBtn.id = "coord-tool-btn";
+coordBtn.title = "Obtenir les coordonnées d'un point";
+coordBtn.innerHTML = "📍 Coordonnées";
+document.getElementById("map").appendChild(coordBtn);
+
+const coordPanel = document.createElement("div");
+coordPanel.id = "coord-panel";
+coordPanel.style.display = "none";
+coordPanel.innerHTML = `
+  <div id="coord-header">
+    <span>📍 Coordonnées</span>
+    <button id="coord-close" title="Fermer">×</button>
+  </div>
+  <div id="coord-body">
+    <div class="coord-row"><span>LV95 (E / N)</span><span id="coord-lv95">—</span></div>
+    <div class="coord-row"><span>WGS84 (lat / lon)</span><span id="coord-wgs84">—</span></div>
+    <div class="coord-row"><button id="coord-copy" title="Copier WGS84">📋 Copier WGS84</button></div>
+  </div>
+`;
+document.getElementById("map").appendChild(coordPanel);
+
+// Styles du bouton et panneau injectés dynamiquement
+const coordStyle = document.createElement("style");
+coordStyle.textContent = `
+  #coord-tool-btn {
+    position: absolute;
+    bottom: 24px;
+    right: 12px;
+    z-index: 1000;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #coord-tool-btn.active {
+    background: #1a56db;
+    color: white;
+  }
+  #coord-tool-btn:hover:not(.active) { background: #f0f4ff; }
+  #coord-panel {
+    position: absolute;
+    bottom: 70px;
+    right: 12px;
+    width: 280px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    z-index: 1000;
+    animation: panelIn 0.18s ease;
+  }
+  #coord-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  #coord-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 20px; color: #aaa; line-height: 1;
+    transition: color 0.15s;
+  }
+  #coord-close:hover { color: #333; }
+  #coord-body { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .coord-row { display: flex; flex-direction: column; font-size: 12px; color: #888; gap: 2px; }
+  .coord-row span:last-child { font-size: 13px; color: #111; font-weight: 500; }
+  #coord-copy {
+    margin-top: 4px;
+    background: #f0f4ff; border: none; border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+    color: #1a56db; font-weight: 600; transition: background 0.15s;
+    width: 100%;
+  }
+  #coord-copy:hover { background: #dce8ff; }
+  #coord-crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    font-size: 28px;
+    z-index: 999;
+    display: none;
+    text-shadow: 0 0 4px white;
+  }
+`;
+document.head.appendChild(coordStyle);
+
+// Croix centrale (indicateur visuel quand l'outil est actif)
+const crosshair = document.createElement("div");
+crosshair.id = "coord-crosshair";
+crosshair.textContent = "✛";
+document.getElementById("map").appendChild(crosshair);
+
+coordBtn.addEventListener("click", () => {
+  coordToolActive = !coordToolActive;
+  coordBtn.classList.toggle("active", coordToolActive);
+  crosshair.style.display = coordToolActive ? "block" : "none";
+  if (!coordToolActive) coordPanel.style.display = "none";
+});
+
+document.getElementById("coord-close").addEventListener("click", () => {
+  coordPanel.style.display = "none";
+  coordToolActive = false;
+  coordBtn.classList.remove("active");
+  crosshair.style.display = "none";
+});
+
+document.getElementById("coord-copy").addEventListener("click", () => {
+  const txt = document.getElementById("coord-wgs84").textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById("coord-copy");
+    btn.textContent = "✅ Copié !";
+    setTimeout(() => btn.textContent = "📋 Copier WGS84", 1500);
+  });
+});
+
 // ── Curseur pointeur au survol ──
 map.on("pointermove", (e) => {
+  if (coordToolActive) {
+    map.getTargetElement().style.cursor = "crosshair";
+    return;
+  }
   map.getTargetElement().style.cursor = map.hasFeatureAtPixel(e.pixel) ? "pointer" : "";
 });
 
 // ── Clic sur la carte ──
 map.on("singleclick", (e) => {
+  // Mode coordonnées
+  if (coordToolActive) {
+    const lv95 = e.coordinate;
+    const wgs84 = ol.proj.transform(lv95, "EPSG:2056", "EPSG:4326");
+    document.getElementById("coord-lv95").textContent =
+      `E ${Math.round(lv95[0]).toLocaleString("fr-CH")}  /  N ${Math.round(lv95[1]).toLocaleString("fr-CH")}`;
+    document.getElementById("coord-wgs84").textContent =
+      `${wgs84[1].toFixed(6)}, ${wgs84[0].toFixed(6)}`;
+    coordPanel.style.display = "block";
+    return;
+  }
   let found = false;
 
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
