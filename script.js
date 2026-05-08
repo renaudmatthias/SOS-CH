@@ -7,18 +7,42 @@ proj4.defs(
 ol.proj.proj4.register(proj4);
 const projection = new ol.proj.Projection({ code: "EPSG:2056", extent });
 
+// ── Résolutions WMTS swisstopo (niveaux 0–28) ──
+const resolutions = [
+  4000, 3750, 3500, 3250, 3000, 2750, 2500, 2250, 2000, 1750,
+  1500, 1250, 1000, 750, 650, 500, 250, 100, 50, 20, 10, 5, 2.5,
+  2, 1.5, 1, 0.5, 0.25, 0.1,
+];
+const matrixIds = resolutions.map((_, i) => i);
+
+const swisstopoWMTS = new ol.source.WMTS({
+  url: "https://wmts.geo.admin.ch/1.0.0/{Layer}/default/current/2056/{TileMatrix}/{TileCol}/{TileRow}.png",
+  layer: "ch.swisstopo.pixelkarte-farbe",
+  matrixSet: "2056",
+  format: "image/png",
+  projection,
+  tileGrid: new ol.tilegrid.WMTS({
+    origin: [2420000, 1350000],
+    resolutions,
+    matrixIds,
+  }),
+  style: "default",
+  crossOrigin: "anonymous",
+});
+
 const map = new ol.Map({
   target: "map",
   layers: [
-    new ol.layer.Tile({
-      source: new ol.source.OSM(), // ← remplace le WMS swisstopo
-    }),
+    new ol.layer.Tile({ source: swisstopoWMTS }),
   ],
   view: new ol.View({
-    projection: "EPSG:3857", // OSM utilise Web Mercator
-    center: ol.proj.fromLonLat([8.23, 46.82]),
-    zoom: 8,
-    minZoom: 7,
+    projection,                          // EPSG:2056
+    center: [2660000, 1190000],
+    zoom: 3,
+    minZoom: 2,
+    maxZoom: 20,
+    extent: [2485000, 1075000, 2834000, 1296000], // bloque hors Suisse
+    constrainOnlyCenter: true,
   }),
 });
 
@@ -135,7 +159,7 @@ function loadGeoJSON(url, style, color) {
     .then((geojson) => {
       const features = new ol.format.GeoJSON().readFeatures(geojson, {
         dataProjection: "EPSG:2056",
-        featureProjection: "EPSG:3857", // ← reprojection vers Web Mercator
+        featureProjection: "EPSG:2056", // même projection que la carte
       });
       const layer = new ol.layer.Vector({ source: new ol.source.Vector({ features }), style });
       layer.set("poiColor", color);
@@ -258,8 +282,12 @@ function formatSubText(item) {
 }
 
 function goToResult(item) {
-  // Convertit WGS84 → EPSG:3857
-  const coords = ol.proj.fromLonLat([parseFloat(item.lon), parseFloat(item.lat)]);
+  // Convertit WGS84 → EPSG:2056
+  const coords = ol.proj.transform(
+    [parseFloat(item.lon), parseFloat(item.lat)],
+    "EPSG:4326",
+    "EPSG:2056"
+  );
 
   if (searchMarkerLayer) map.removeLayer(searchMarkerLayer);
 
