@@ -24,12 +24,11 @@ const map = new ol.Map({
     }),
   ],
   view: new ol.View({
-    projection,                          // EPSG:2056
+    projection,
     center: [2660000, 1190000],
-    zoom: 3,
+    zoom: 2,
     minZoom: 2,
-    maxZoom: 20,
-    extent: [2485000, 1075000, 2834000, 1296000], // bloque hors Suisse
+    extent: [2485000, 1075000, 2834000, 1296000],
     constrainOnlyCenter: true,
   }),
 });
@@ -102,87 +101,49 @@ coordPanel.innerHTML = `
   <div id="coord-body">
     <div class="coord-row"><span>LV95 (E / N)</span><span id="coord-lv95">—</span></div>
     <div class="coord-row"><span>WGS84 (lat / lon)</span><span id="coord-wgs84">—</span></div>
-    <div class="coord-row"><button id="coord-copy" title="Copier WGS84">📋 Copier WGS84</button></div>
+    <div class="coord-row"><button id="coord-copy">📋 Copier WGS84</button></div>
   </div>
 `;
 document.getElementById("map").appendChild(coordPanel);
 
-// Styles du bouton et panneau injectés dynamiquement
 const coordStyle = document.createElement("style");
 coordStyle.textContent = `
   #coord-tool-btn {
-    position: absolute;
-    bottom: 24px;
-    right: 12px;
-    z-index: 1000;
-    background: white;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
-    padding: 8px 14px;
-    font-size: 13px;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    cursor: pointer;
-    transition: background 0.15s;
+    position: absolute; bottom: 24px; right: 12px; z-index: 1000;
+    background: white; border: none; border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18); padding: 8px 14px;
+    font-size: 13px; font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer; transition: background 0.15s;
   }
-  #coord-tool-btn.active {
-    background: #1a56db;
-    color: white;
-  }
+  #coord-tool-btn.active { background: #1a56db; color: white; }
   #coord-tool-btn:hover:not(.active) { background: #f0f4ff; }
   #coord-panel {
-    position: absolute;
-    bottom: 70px;
-    right: 12px;
-    width: 280px;
-    background: white;
-    border-radius: 10px;
+    position: absolute; bottom: 70px; right: 12px; width: 280px;
+    background: white; border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-    font-family: 'Segoe UI', Arial, sans-serif;
-    overflow: hidden;
-    z-index: 1000;
-    animation: panelIn 0.18s ease;
+    font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; z-index: 1000;
   }
   #coord-header {
-    padding: 10px 16px;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    font-size: 13px;
+    padding: 10px 16px; border-bottom: 1px solid #f0f0f0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; font-size: 13px;
   }
   #coord-close {
     background: none; border: none; cursor: pointer;
-    font-size: 20px; color: #aaa; line-height: 1;
-    transition: color 0.15s;
+    font-size: 20px; color: #aaa; line-height: 1; transition: color 0.15s;
   }
   #coord-close:hover { color: #333; }
   #coord-body { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
   .coord-row { display: flex; flex-direction: column; font-size: 12px; color: #888; gap: 2px; }
   .coord-row span:last-child { font-size: 13px; color: #111; font-weight: 500; }
   #coord-copy {
-    margin-top: 4px;
-    background: #f0f4ff; border: none; border-radius: 6px;
+    margin-top: 4px; background: #f0f4ff; border: none; border-radius: 6px;
     padding: 6px 12px; font-size: 12px; cursor: pointer;
-    color: #1a56db; font-weight: 600; transition: background 0.15s;
-    width: 100%;
+    color: #1a56db; font-weight: 600; transition: background 0.15s; width: 100%;
   }
   #coord-copy:hover { background: #dce8ff; }
-  #coord-crosshair {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    font-size: 28px;
-    z-index: 999;
-    display: none;
-    text-shadow: 0 0 4px white;
-  }
 `;
 document.head.appendChild(coordStyle);
-
-
 
 coordBtn.addEventListener("click", () => {
   coordToolActive = !coordToolActive;
@@ -205,18 +166,14 @@ document.getElementById("coord-copy").addEventListener("click", () => {
   });
 });
 
-// ── Curseur pointeur au survol ──
+// ── Curseur ──
 map.on("pointermove", (e) => {
-  if (coordToolActive) {
-    map.getTargetElement().style.cursor = "crosshair";
-    return;
-  }
-  map.getTargetElement().style.cursor = map.hasFeatureAtPixel(e.pixel) ? "pointer" : "";
+  map.getTargetElement().style.cursor =
+    coordToolActive ? "crosshair" : map.hasFeatureAtPixel(e.pixel) ? "pointer" : "";
 });
 
 // ── Clic sur la carte ──
 map.on("singleclick", (e) => {
-  // Mode coordonnées
   if (coordToolActive) {
     const lv95 = e.coordinate;
     const wgs84 = ol.proj.transform(lv95, "EPSG:2056", "EPSG:4326");
@@ -227,15 +184,14 @@ map.on("singleclick", (e) => {
     coordPanel.style.display = "block";
     return;
   }
-  let found = false;
 
+  let found = false;
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
     if (found) return;
     if (layer === searchMarkerLayer) return;
     found = true;
 
     if (selectedFeature) selectedFeature.setStyle(defaultStyleMap[selectedColor]);
-
     selectedFeature = feature;
     selectedColor   = layer.get("poiColor");
     feature.setStyle(selectedStyleMap[selectedColor]);
@@ -266,7 +222,6 @@ map.on("singleclick", (e) => {
       });
       elBody.appendChild(table);
     }
-
     panel.style.display = "block";
   });
 
@@ -278,14 +233,13 @@ function formatKey(key) {
 }
 
 // ── Chargement des couches GeoJSON ──
-// Vos GeoJSON sont en EPSG:2056, il faut les reprojeter vers EPSG:3857
 function loadGeoJSON(url, style, color) {
   fetch(url)
     .then((res) => res.json())
     .then((geojson) => {
       const features = new ol.format.GeoJSON().readFeatures(geojson, {
         dataProjection: "EPSG:2056",
-        featureProjection: "EPSG:2056", // même projection que la carte
+        featureProjection: "EPSG:2056",
       });
       const layer = new ol.layer.Vector({ source: new ol.source.Vector({ features }), style });
       layer.set("poiColor", color);
@@ -296,7 +250,6 @@ function loadGeoJSON(url, style, color) {
 loadGeoJSON("./fire_station.geojson", blueStyle,  "blue");
 loadGeoJSON("./police_v2.geojson",    greenStyle, "green");
 loadGeoJSON("./hospital.geojson",     redStyle,   "red");
-
 
 // ── Recherche d'adresse (Nominatim) ──
 const searchInput   = document.getElementById("search-input");
@@ -317,10 +270,7 @@ searchInput.addEventListener("input", () => {
 });
 
 searchInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    clearTimeout(searchDebounce);
-    searchAddress(searchInput.value);
-  }
+  if (e.key === "Enter") { clearTimeout(searchDebounce); searchAddress(searchInput.value); }
   if (e.key === "Escape") closeSearch();
 });
 
@@ -328,10 +278,7 @@ searchClear.addEventListener("click", () => {
   searchInput.value = "";
   searchClear.style.display = "none";
   searchResults.style.display = "none";
-  if (searchMarkerLayer) {
-    map.removeLayer(searchMarkerLayer);
-    searchMarkerLayer = null;
-  }
+  if (searchMarkerLayer) { map.removeLayer(searchMarkerLayer); searchMarkerLayer = null; }
   searchInput.focus();
 });
 
@@ -339,33 +286,25 @@ async function searchAddress(query) {
   if (!query.trim()) return;
   searchResults.innerHTML = "<li class='search-loading'>Recherche…</li>";
   searchResults.style.display = "block";
-
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=ch&format=json&limit=6&addressdetails=1`;
     const res  = await fetch(url, { headers: { "Accept-Language": "fr" } });
     const data = await res.json();
-
     searchResults.innerHTML = "";
-
     if (data.length === 0) {
       searchResults.innerHTML = "<li class='search-no-result'>Aucun résultat trouvé</li>";
-      searchResults.style.display = "block";
       return;
     }
-
     data.forEach(item => {
       const li = document.createElement("li");
-      const icon     = getResultIcon(item.type, item.class);
       const mainText = formatMainText(item);
       const subText  = formatSubText(item);
-
       li.innerHTML = `
-        <span class="result-icon">${icon}</span>
+        <span class="result-icon">${getResultIcon(item.type, item.class)}</span>
         <span class="result-text">
           <span class="result-main">${mainText}</span>
           ${subText ? `<span class="result-sub">${subText}</span>` : ""}
-        </span>
-      `;
+        </span>`;
       li.addEventListener("click", () => {
         goToResult(item);
         searchResults.style.display = "none";
@@ -374,21 +313,18 @@ async function searchAddress(query) {
       });
       searchResults.appendChild(li);
     });
-
     searchResults.style.display = "block";
-  } catch (err) {
+  } catch {
     searchResults.innerHTML = "<li class='search-no-result'>Erreur de connexion</li>";
   }
 }
 
 function getResultIcon(type, cls) {
-  if (cls === "highway" || type === "road" || type === "street") return "🛣️";
+  if (cls === "highway" || type === "road") return "🛣️";
   if (cls === "place" && (type === "city" || type === "town")) return "🏙️";
   if (cls === "place" && type === "village") return "🏡";
   if (cls === "amenity" && type === "hospital") return "🏥";
-  if (cls === "amenity" && type === "school") return "🏫";
   if (cls === "building") return "🏢";
-  if (cls === "boundary" || type === "administrative") return "📍";
   return "📌";
 }
 
@@ -400,7 +336,6 @@ function formatMainText(item) {
 function formatSubText(item) {
   const a = item.address || {};
   const parts = [];
-  if (a.house_number && a.road) parts.push(a.house_number);
   if (a.postcode) parts.push(a.postcode);
   if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
   if (a.state) parts.push(a.state);
@@ -408,41 +343,22 @@ function formatSubText(item) {
 }
 
 function goToResult(item) {
-  // Convertit WGS84 → EPSG:2056
-  const coords = ol.proj.transform(
-    [parseFloat(item.lon), parseFloat(item.lat)],
-    "EPSG:4326",
-    "EPSG:2056"
-  );
-
+  const coords = ol.proj.transform([parseFloat(item.lon), parseFloat(item.lat)], "EPSG:4326", "EPSG:2056");
   if (searchMarkerLayer) map.removeLayer(searchMarkerLayer);
-
   const marker = new ol.Feature({ geometry: new ol.geom.Point(coords) });
-  marker.setStyle(
-    new ol.style.Style({
-      image: new ol.style.RegularShape({
-        points: 4,
-        radius: 10,
-        radius2: 0,
-        angle: Math.PI / 4,
-        fill: new ol.style.Fill({ color: "orange" }),
-        stroke: new ol.style.Stroke({ color: "white", width: 2 }),
-      }),
-    })
-  );
-
-  searchMarkerLayer = new ol.layer.Vector({
-    source: new ol.source.Vector({ features: [marker] }),
-    zIndex: 999,
-  });
+  marker.setStyle(new ol.style.Style({
+    image: new ol.style.RegularShape({
+      points: 4, radius: 10, radius2: 0, angle: Math.PI / 4,
+      fill: new ol.style.Fill({ color: "orange" }),
+      stroke: new ol.style.Stroke({ color: "white", width: 2 }),
+    }),
+  }));
+  searchMarkerLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: [marker] }), zIndex: 999 });
   map.addLayer(searchMarkerLayer);
-
-  map.getView().animate({ center: coords, zoom: 14, duration: 700 });
+  map.getView().animate({ center: coords, zoom: 7, duration: 700 });
 }
 
-function closeSearch() {
-  searchResults.style.display = "none";
-}
+function closeSearch() { searchResults.style.display = "none"; }
 
 document.addEventListener("click", (e) => {
   if (!e.target.closest("#search-bar")) closeSearch();
