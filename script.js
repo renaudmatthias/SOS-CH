@@ -1,4 +1,3 @@
-
 // ── Projection LV95 ──
 const extent = [2420000, 1030000, 2900000, 1360000];
 proj4.defs(
@@ -32,26 +31,9 @@ const map = new ol.Map({
   }),
 });
 
-// ── Styles POI ──
-const blueStyle  = new ol.style.Style({ image: new ol.style.Circle({ radius: 6, fill: new ol.style.Fill({ color: "blue" }),  stroke: new ol.style.Stroke({ color: "white", width: 2 }) }) });
-const greenStyle = new ol.style.Style({ image: new ol.style.Circle({ radius: 6, fill: new ol.style.Fill({ color: "green" }), stroke: new ol.style.Stroke({ color: "white", width: 2 }) }) });
-const redStyle   = new ol.style.Style({ image: new ol.style.Circle({ radius: 6, fill: new ol.style.Fill({ color: "red" }),   stroke: new ol.style.Stroke({ color: "white", width: 2 }) }) });
-
-const selectedStyleMap = {
-  blue:  new ol.style.Style({ image: new ol.style.Circle({ radius: 10, fill: new ol.style.Fill({ color: "blue" }),  stroke: new ol.style.Stroke({ color: "white", width: 3 }) }) }),
-  green: new ol.style.Style({ image: new ol.style.Circle({ radius: 10, fill: new ol.style.Fill({ color: "green" }), stroke: new ol.style.Stroke({ color: "white", width: 3 }) }) }),
-  red:   new ol.style.Style({ image: new ol.style.Circle({ radius: 10, fill: new ol.style.Fill({ color: "red" }),   stroke: new ol.style.Stroke({ color: "white", width: 3 }) }) }),
-};
-const defaultStyleMap = { blue: blueStyle, green: greenStyle, red: redStyle };
-
-const layerTypeMap = {
-  blue:  { label: "Caserne de pompiers", emoji: "🚒", color: "#1a56db" },
-  green: { label: "Poste de police",      emoji: "👮", color: "#057a55" },
-  red:   { label: "Hôpital",              emoji: "🏥", color: "#e02424" },
-};
 
 // ── Chargement GeoJSON ──
-function loadGeoJSON(url, style, color) {
+function loadGeoJSON(url) {
   fetch(url)
     .then(res => res.json())
     .then(geojson => {
@@ -59,15 +41,10 @@ function loadGeoJSON(url, style, color) {
         dataProjection: "EPSG:2056",
         featureProjection: "EPSG:2056",
       });
-      const source = new ol.source.Vector({ features });
-      poiSources[color] = source;
-      const layer = new ol.layer.Vector({ source, style });
-      layer.set("poiColor", color);
-      map.addLayer(layer);
     });
 }
 
-loadGeoJSON("./fire_station.geojson", redStyle,  "red");
-loadGeoJSON("./police_v2.geojson",    blueStyle, "blue");
-loadGeoJSON("./hospital.geojson",     greenStyle,   "green");
+loadGeoJSON("./fire_station.geojson");
+loadGeoJSON("./police_v2.geojson");
+loadGeoJSON("./hospital.geojson");
 
