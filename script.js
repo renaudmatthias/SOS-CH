@@ -41,6 +41,11 @@ function loadGeoJSON(url) {
         dataProjection: "EPSG:2056",
         featureProjection: "EPSG:2056",
       });
+      const style = new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 5,
+          fill: new ol.style.Fill({ color: "red" })
+        })
     });
 }
 
