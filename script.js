@@ -49,7 +49,6 @@ function loadGeoJSON(url) {
         }),
       });
 
-      // Bug 1 fixed: build the layer and add it to the map
       const vectorLayer = new ol.layer.Vector({
         source: new ol.source.Vector({ features }),
         style,
@@ -59,6 +58,39 @@ function loadGeoJSON(url) {
 
     }); 
 }
+const fireStationLayer = new ol.layer.Vector({
+  source: new ol.source.Vector(),
+  style: new ol.style.Style({
+    image: new ol.style.Circle({
+      radius: 5,
+      fill: new ol.style.Fill({ color: "red" }),
+    }),
+  }),
+});
+map.addLayer(fireStationLayer);
+
+const policeLayer = new ol.layer.Vector({
+  source: new ol.source.Vector(),
+  style: new ol.style.Style({
+    image: new ol.style.Circle({
+      radius: 5,
+      fill: new ol.style.Fill({ color: "blue" }),
+    }),
+  }),
+});
+map.addLayer(policeLayer);
+
+const hospitalLayer = new ol.layer.Vector({
+  source: new ol.source.Vector(),
+  style: new ol.style.Style({
+    image: new ol.style.Circle({
+      radius: 5,
+      fill: new ol.style.Fill({ color: "green" }),
+    }),
+  }),
+});
+map.addLayer(hospitalLayer);
+
 loadGeoJSON("./fire_station.geojson");
 loadGeoJSON("./police_v2.geojson");
 loadGeoJSON("./hospital.geojson");
