@@ -31,39 +31,14 @@ const map = new ol.Map({
   }),
 });
 
-
-// ── Chargement GeoJSON ──
-function loadGeoJSON(url) {
-  fetch(url)
-    .then(res => res.json())
-    .then(geojson => {
-      const features = new ol.format.GeoJSON().readFeatures(geojson, {
-        dataProjection: "EPSG:2056",
-        featureProjection: "EPSG:2056",
-      });
-
-      const style = new ol.style.Style({
-        image: new ol.style.Circle({
-          radius: 5,
-          fill: new ol.style.Fill({ color: "red" }),
-        }),
-      });
-
-      const vectorLayer = new ol.layer.Vector({
-        source: new ol.source.Vector({ features }),
-        style,
-      });
-
-      map.addLayer(vectorLayer);
-
-    }); 
-}
+// ── Layers ──
 const fireStationLayer = new ol.layer.Vector({
   source: new ol.source.Vector(),
   style: new ol.style.Style({
     image: new ol.style.Circle({
       radius: 5,
       fill: new ol.style.Fill({ color: "red" }),
+      stroke: new ol.style.Stroke({ color: "white", width: 1 }),
     }),
   }),
 });
@@ -75,6 +50,7 @@ const policeLayer = new ol.layer.Vector({
     image: new ol.style.Circle({
       radius: 5,
       fill: new ol.style.Fill({ color: "blue" }),
+      stroke: new ol.style.Stroke({ color: "white", width: 1 }),
     }),
   }),
 });
@@ -86,17 +62,40 @@ const hospitalLayer = new ol.layer.Vector({
     image: new ol.style.Circle({
       radius: 5,
       fill: new ol.style.Fill({ color: "green" }),
+      stroke: new ol.style.Stroke({ color: "white", width: 1 }),
+    }), 
     }),
   }),
-});
+;
 map.addLayer(hospitalLayer);
-const layers = {
-  "fire_station": fireStationLayer,
-  "police_v2": policeLayer,
-  "hospital": hospitalLayer
-};  
 
-loadGeoJSON("./fire_station.geojson");
-loadGeoJSON("./police_v2.geojson");
-loadGeoJSON("./hospital.geojson");
+// ── Chargement GeoJSON ──
+fetch("./fire_station.geojson")
+  .then(res => res.json())
+  .then(data => {
+    const features = new ol.format.GeoJSON().readFeatures(data, {
+      dataProjection: "EPSG:2056",
+      featureProjection: "EPSG:2056",
+    });
+    fireStationLayer.getSource().addFeatures(features);
+  });
 
+fetch("./police_v2.geojson")
+  .then(res => res.json())
+  .then(data => {
+    const features = new ol.format.GeoJSON().readFeatures(data, {
+      dataProjection: "EPSG:2056",
+      featureProjection: "EPSG:2056",
+    });
+    policeLayer.getSource().addFeatures(features);
+  });
+
+fetch("./hospital.geojson")
+  .then(res => res.json())
+  .then(data => {
+    const features = new ol.format.GeoJSON().readFeatures(data, {
+      dataProjection: "EPSG:2056",
+      featureProjection: "EPSG:2056",
+    });
+    hospitalLayer.getSource().addFeatures(features);
+  });
