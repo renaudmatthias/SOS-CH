@@ -90,6 +90,11 @@ const hospitalLayer = new ol.layer.Vector({
   }),
 });
 map.addLayer(hospitalLayer);
+const layers = {
+  "fire_station": fireStationLayer,
+  "police_v2": policeLayer,
+  "hospital": hospitalLayer
+};  
 
 loadGeoJSON("./fire_station.geojson");
 loadGeoJSON("./police_v2.geojson");
