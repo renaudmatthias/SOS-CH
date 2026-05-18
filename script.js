@@ -58,6 +58,7 @@ function loadGeoJSON(url) {
       map.addLayer(vectorLayer);
 
     }); 
+}
 loadGeoJSON("./fire_station.geojson");
 loadGeoJSON("./police_v2.geojson");
 loadGeoJSON("./hospital.geojson");
