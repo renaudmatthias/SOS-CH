@@ -65,8 +65,7 @@ const hospitalLayer = new ol.layer.Vector({
       stroke: new ol.style.Stroke({ color: "white", width: 1 }),
     }), 
     }),
-  }),
-;
+  });
 map.addLayer(hospitalLayer);
 
 // ── Chargement GeoJSON ──
