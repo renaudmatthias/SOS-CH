@@ -41,14 +41,23 @@ function loadGeoJSON(url) {
         dataProjection: "EPSG:2056",
         featureProjection: "EPSG:2056",
       });
+
       const style = new ol.style.Style({
         image: new ol.style.Circle({
           radius: 5,
-          fill: new ol.style.Fill({ color: "red" })
-        })
-    });
-}
+          fill: new ol.style.Fill({ color: "red" }),
+        }),
+      });
 
+      // Bug 1 fixed: build the layer and add it to the map
+      const vectorLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({ features }),
+        style,
+      });
+
+      map.addLayer(vectorLayer);
+
+    }); 
 loadGeoJSON("./fire_station.geojson");
 loadGeoJSON("./police_v2.geojson");
 loadGeoJSON("./hospital.geojson");
