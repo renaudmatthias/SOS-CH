@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "pompier",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2056" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 49395, "osm_id": "1696776746", "code": 2002, "fclass": "fire_station", "name": "Pompiers" }, "geometry": { "type": "Point", "coordinates": [ 2575866.70020340802148, 1183198.379642353160307 ] } }
+]
+}
