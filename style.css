@@ -303,3 +303,119 @@ header {
   box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
   flex-shrink: 0;
 }
+/* ── Toolbar Valhalla ── */
+#valhalla-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 1000;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.vtool-btn {
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.vtool-btn:hover:not(.active) { background: #f0f4ff; }
+.vtool-btn.active { background: #1a56db; color: white; box-shadow: 0 2px 16px rgba(26,86,219,0.35); }
+.vtool-clear { color: #e02424; }
+.vtool-clear:hover { background: #fff5f5; }
+
+/* ── Sélecteur type POI ── */
+#route-type-selector {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.16);
+  padding: 8px 12px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 13px;
+  animation: dropIn 0.15s ease;
+}
+
+.rts-label { color: #888; font-size: 12px; margin-right: 4px; }
+
+.rts-btn {
+  background: #f4f4f4;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.rts-btn:hover { background: #e8eeff; }
+.rts-btn.selected { background: #1a56db; color: white; }
+
+/* ── Résumé itinéraire ── */
+#route-summary {
+  background: #f0f4ff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-row {
+  font-size: 14px;
+  color: #111;
+}
+
+#clear-route-btn {
+  background: none;
+  border: 1px solid #ccd6f0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+  transition: background 0.12s;
+  width: fit-content;
+}
+#clear-route-btn:hover { background: #e0e8ff; }
+
+/* ── Toast notifications ── */
+#valhalla-toast {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  animation: dropIn 0.2s ease;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.toast-info    { background: #1a56db; color: white; }
+.toast-success { background: #057a55; color: white; }
+.toast-error   { background: #e02424; color: white; }
+
+.route-note {
+  font-size: 11px;
+  color: #057a55;
+  font-style: italic;
+}
