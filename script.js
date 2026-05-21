@@ -55,9 +55,9 @@ const selectedStyleMap = {
 const defaultStyleMap = { blue: blueStyle, green: greenStyle, red: redStyle };
 
 const layerTypeMap = {
-  blue:  { label: "Caserne de pompiers", emoji: "🚒", color: "#1a56db" },
-  green: { label: "Poste de police",      emoji: "👮", color: "#057a55" },
-  red:   { label: "Hôpital",              emoji: "🏥", color: "#e02424" },
+  red:   { label: "Caserne de pompiers", emoji: "🚒", color: "#e02424" },
+  blue:  { label: "Poste de police",      emoji: "👮", color: "#1a56db" },
+  green: { label: "Hôpital",              emoji: "🏥", color: "#057a55" },
 };
 
 // ── DOM ──
@@ -218,6 +218,7 @@ const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
   <button id="btn-route" class="vtool-btn" title="Cliquez sur la carte pour calculer l'itinéraire vers le service le plus proche">🚨 Itinéraire</button>
+  <button id="btn-iso" class="vtool-btn" title="Cliquez sur la carte pour afficher les isochrones 5/10/15 min">🕐 Isochrones</button>
   <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">✕ Effacer</button>
 `;
 document.getElementById("map").appendChild(valhallaToolbar);
@@ -228,14 +229,14 @@ routeTypeSelector.id = "route-type-selector";
 routeTypeSelector.style.display = "none";
 routeTypeSelector.innerHTML = `
   <span class="rts-label">Vers :</span>
-  <button class="rts-btn" data-color="blue">🚒 Pompiers</button>
-  <button class="rts-btn" data-color="green">👮 Police</button>
-  <button class="rts-btn selected" data-color="red">🏥 Hôpital</button>
+  <button class="rts-btn" data-color="red">🚒 Pompiers</button>
+  <button class="rts-btn" data-color="blue">👮 Police</button>
+  <button class="rts-btn selected" data-color="green">🏥 Hôpital</button>
 `;
 document.getElementById("map").appendChild(routeTypeSelector);
 
 let activeValhallaMode  = null;
-let selectedRouteColor  = "red";
+let selectedRouteColor  = "green";
 
 function setValhallaMode(mode) {
   activeValhallaMode = activeValhallaMode === mode ? null : mode;
@@ -392,7 +393,7 @@ function loadGeoJSON(url, style, color) {
     });
 }
 
-loadGeoJSON("./fire_station.geojson", redStyle,  "red");
-loadGeoJSON("./police_v2.geojson",    blueStyle, "blue");
-loadGeoJSON("./hospital.geojson",     greenStyle,   "green");
+loadGeoJSON("./fire_station.geojson", redStyle,   "red");
+loadGeoJSON("./police_v2.geojson",    blueStyle,  "blue");
+loadGeoJSON("./hospital.geojson",     greenStyle, "green");
 

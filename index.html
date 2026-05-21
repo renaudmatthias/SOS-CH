@@ -22,11 +22,22 @@
       </div>
       <img src="HEIG-VD_logotype_rouge-rvb.png" alt="HEIG-VD" width="100" height="80">
     </header>
-  
 
     <!-- La carte prend tout l'espace restant -->
     <div id="map" class="flex-grow-1">
 
+      <!-- Panneau d'information POI -->
+      <div id="poi-panel">
+        <div id="poi-header">
+          <span id="poi-emoji"></span>
+          <div>
+            <div id="poi-type"></div>
+            <div id="poi-name"></div>
+          </div>
+          <button id="poi-close">×</button>
+        </div>
+        <div id="poi-body"></div>
+      </div>
 
       <!-- Légende -->
       <div id="map-legend" class="position-absolute bottom-0 start-0 m-3 bg-white rounded-3 shadow-sm p-3 small">
@@ -40,6 +51,7 @@
           <span class="legend-dot bg-success"></span> Hôpital
         </div>
       </div>
+
       <!-- Crédits -->
       <div class="position-absolute bottom-0 end-0 m-3 bg-white rounded-2 shadow-sm p-2" style="z-index: 1000; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
         <div class="d-flex align-items-center gap-2" style="color: #333;">
@@ -47,7 +59,7 @@
         </div>
       </div>
     </div>
-</div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
