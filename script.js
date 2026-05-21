@@ -1,9 +1,6 @@
-// ── Configuration Valhalla ──
-const VALHALLA_BASE = "https://valhalla1.openstreetmap.de";
-const VALHALLA_COSTING = "auto";
-const VALHALLA_COSTING_OPTIONS = {
-  auto: { use_highways: 1.0, use_tolls: 1.0, top_speed: 130 }
-};
+// ── Routing : OSRM public (fallback: valhalla2) ──
+// OSRM : router.project-osrm.org — format /route/v1/driving/lon1,lat1;lon2,lat2
+const OSRM_BASE = "https://router.project-osrm.org";
 
 // ── Projection LV95 ──
 const extent = [2420000, 1030000, 2900000, 1360000];
@@ -77,17 +74,13 @@ function closePanel() {
 }
 btnClose.addEventListener("click", closePanel);
 
-// ── Couches Valhalla ──
-let routeLayer     = null;
-let isochroneLayer = null;
+// ── Couche itinéraire ──
+let routeLayer = null;
 
 function clearRoute() {
   if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
   const rs = document.getElementById("route-summary");
   if (rs) rs.remove();
-}
-function clearIsochrones() {
-  if (isochroneLayer) { map.removeLayer(isochroneLayer); isochroneLayer = null; }
 }
 
 // ── Conversion ──
@@ -112,123 +105,64 @@ function getNearestCandidates(lv95Coord, color, n = CANDIDATES) {
     .map(x => x.feature);
 }
 
+// ── Appel OSRM /route ──
+// Retourne { time (secondes), distance (km), geometry (coordonnées WGS84 [[lon,lat]...]) }
+async function getRouteOSRM(fromWgs84, toWgs84) {
+  const url = `${OSRM_BASE}/route/v1/driving/` +
+    `${fromWgs84[0]},${fromWgs84[1]};${toWgs84[0]},${toWgs84[1]}` +
+    `?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.length) throw new Error("OSRM: pas d'itinéraire");
+  const route = data.routes[0];
+  return {
+    time:     route.duration,                         // secondes
+    distance: route.distance / 1000,                 // km
+    coords:   route.geometry.coordinates,            // [[lon, lat], ...]
+  };
+}
+
+// ── Trouver le POI le plus rapide parmi les N candidats ──
 async function findFastestPOI(fromLv95, color) {
   const candidates = getNearestCandidates(fromLv95, color);
   if (!candidates.length) return null;
   const fromWgs84 = lv95ToWgs84(fromLv95);
+
   const results = await Promise.all(
     candidates.map(async f => {
       const toWgs84 = lv95ToWgs84(f.getGeometry().getCoordinates());
       try {
-        const data = await getRoute(fromWgs84, toWgs84);
-        const time = data.trip?.summary?.time ?? Infinity;
-        return { feature: f, data, time };
-      } catch {
-        return { feature: f, data: null, time: Infinity };
+        const route = await getRouteOSRM(fromWgs84, toWgs84);
+        return { feature: f, route, time: route.time };
+      } catch (e) {
+        console.warn("OSRM échec pour un candidat :", e.message);
+        return { feature: f, route: null, time: Infinity };
       }
     })
   );
+
   return results.reduce((best, r) => (r.time < best.time ? r : best), results[0]);
 }
 
-// ── Décoder polyline Valhalla (precision=6) ──
-function decodePolyline(encoded, precision = 6) {
-  const factor = Math.pow(10, precision);
-  const coords = [];
-  let i = 0, lat = 0, lng = 0;
-  while (i < encoded.length) {
-    let b, shift = 0, result = 0;
-    do { b = encoded.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-    shift = 0; result = 0;
-    do { b = encoded.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    coords.push([lng / factor, lat / factor]);
-  }
-  return coords;
-}
-
-// ── Appel Valhalla /route ──
-async function getRoute(fromWgs84, toWgs84) {
-  const res = await fetch(`${VALHALLA_BASE}/route`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      locations: [
-        { lon: fromWgs84[0], lat: fromWgs84[1] },
-        { lon: toWgs84[0],   lat: toWgs84[1] },
-      ],
-      costing: VALHALLA_COSTING,
-      costing_options: VALHALLA_COSTING_OPTIONS,
-      units: "km",
-    }),
-  });
-  if (!res.ok) throw new Error(`Valhalla /route HTTP ${res.status}`);
-  return res.json();
-}
-
-// ── Appel Valhalla /isochrone ──
-async function getIsochrone(fromWgs84) {
-  const res = await fetch(`${VALHALLA_BASE}/isochrone`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      locations: [{ lon: fromWgs84[0], lat: fromWgs84[1] }],
-      costing: VALHALLA_COSTING,
-      contours: [
-        { time: 5,  color: "ff0000" },
-        { time: 10, color: "ffaa00" },
-        { time: 15, color: "00aa00" },
-      ],
-      polygons: true,
-    }),
-  });
-  if (!res.ok) throw new Error(`Valhalla /isochrone HTTP ${res.status}`);
-  return res.json();
-}
-
 // ── Afficher l'itinéraire ──
-function displayRoute(data, color) {
+function displayRoute(coords, color) {
   clearRoute();
-  const shape = data.trip?.legs?.[0]?.shape;
-  if (!shape) return;
   const typeColors = { blue: "#1a56db", green: "#057a55", red: "#e02424" };
   const lineColor  = typeColors[color] || "#ff6600";
-  const wgs84Coords = decodePolyline(shape);
-  const lv95Coords  = wgs84Coords.map(([lon, lat]) => wgs84ToLv95([lon, lat]));
-  const feature = new ol.Feature({ geometry: new ol.geom.LineString(lv95Coords) });
+
+  const lv95Coords = coords.map(([lon, lat]) => wgs84ToLv95([lon, lat]));
+  const feature    = new ol.Feature({ geometry: new ol.geom.LineString(lv95Coords) });
   feature.setStyle([
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: "white",   width: 7 }) }),
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: lineColor, width: 4, lineDash: [12, 6] }) }),
   ]);
-  routeLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: [feature] }), zIndex: 500 });
-  map.addLayer(routeLayer);
-}
 
-// ── Afficher les isochrones ──
-function displayIsochrones(geojson) {
-  clearIsochrones();
-  const isoColors = [
-    { fill: "rgba(255,0,0,0.12)",    stroke: "#e02424" },
-    { fill: "rgba(255,170,0,0.12)",  stroke: "#d97706" },
-    { fill: "rgba(0,170,0,0.12)",    stroke: "#057a55" },
-  ];
-  const features = new ol.format.GeoJSON().readFeatures(geojson, {
-    dataProjection: "EPSG:4326",
-    featureProjection: "EPSG:2056",
+  routeLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({ features: [feature] }),
+    zIndex: 500,
   });
-  features.forEach((f, i) => {
-    const c = isoColors[i] || isoColors[isoColors.length - 1];
-    f.setStyle(new ol.style.Style({
-      fill:   new ol.style.Fill({ color: c.fill }),
-      stroke: new ol.style.Stroke({ color: c.stroke, width: 2 }),
-    }));
-  });
-  isochroneLayer = new ol.layer.Vector({
-    source: new ol.source.Vector({ features }),
-    zIndex: 400,
-  });
-  map.addLayer(isochroneLayer);
+  map.addLayer(routeLayer);
 }
 
 // ── Toast ──
@@ -243,12 +177,11 @@ function showToast(msg, type = "info") {
   setTimeout(() => toast.remove(), 3200);
 }
 
-// ── Barre d'outils Valhalla ──
+// ── Barre d'outils ──
 const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
   <button id="btn-route" class="vtool-btn" title="Calculer l'itinéraire vers le service le plus proche">🚨 Itinéraire</button>
-  <button id="btn-iso"   class="vtool-btn" title="Afficher les isochrones 5/10/15 min">🕐 Isochrones</button>
   <button id="btn-coord" class="vtool-btn" title="Afficher les coordonnées d'un point">📍 Coordonnées</button>
   <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">✕ Effacer</button>
 `;
@@ -322,7 +255,7 @@ const searchMarkerLayer  = new ol.layer.Vector({
 });
 map.addLayer(searchMarkerLayer);
 
-// ── Logique recherche (geo.admin.ch) ──
+// ── Logique recherche ──
 const searchInput   = document.getElementById("search-input");
 const searchClear   = document.getElementById("search-clear");
 const searchResults = document.getElementById("search-results");
@@ -371,12 +304,10 @@ async function doSearch(q) {
         </div>
       `;
       li.addEventListener("click", () => {
-        const x = attrs.y, y = attrs.x; // geo.admin retourne y=Est, x=Nord en LV95
-        const coord = [x, y];
+        const coord = [attrs.y, attrs.x]; // geo.admin: y=Est, x=Nord
         map.getView().animate({ center: coord, zoom: 14, duration: 600 });
         searchMarkerSource.clear();
-        const marker = new ol.Feature({ geometry: new ol.geom.Point(coord) });
-        searchMarkerSource.addFeature(marker);
+        searchMarkerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(coord) }));
         searchInput.value = attrs.label.replace(/<[^>]+>/g, "");
         searchClear.style.display = "flex";
         searchResults.style.display = "none";
@@ -393,43 +324,39 @@ let activeValhallaMode = null;
 let selectedRouteColor = "green";
 let coordToolActive    = false;
 
-function setValhallaMode(mode) {
-  activeValhallaMode = activeValhallaMode === mode ? null : mode;
+function setRouteMode() {
+  const wasActive = activeValhallaMode === "route";
+  activeValhallaMode = wasActive ? null : "route";
   coordToolActive    = false;
-  document.getElementById("btn-route").classList.toggle("active", activeValhallaMode === "route");
-  document.getElementById("btn-iso").classList.toggle("active",   activeValhallaMode === "iso");
+  document.getElementById("btn-route").classList.toggle("active", !wasActive);
   document.getElementById("btn-coord").classList.remove("active");
   routeTypeSelector.style.display = activeValhallaMode === "route" ? "flex" : "none";
   map.getTargetElement().style.cursor = activeValhallaMode ? "crosshair" : "";
-  if (activeValhallaMode === "route") showToast("Cliquez sur la carte pour calculer l'itinéraire", "info");
-  if (activeValhallaMode === "iso")   showToast("Cliquez sur la carte pour afficher les isochrones 5/10/15 min", "info");
+  if (!wasActive) showToast("Cliquez sur la carte pour calculer l'itinéraire", "info");
 }
 
 function setCoordMode() {
   coordToolActive    = !coordToolActive;
   activeValhallaMode = null;
-  document.getElementById("btn-route").classList.remove("active");
-  document.getElementById("btn-iso").classList.remove("active");
   document.getElementById("btn-coord").classList.toggle("active", coordToolActive);
+  document.getElementById("btn-route").classList.remove("active");
   routeTypeSelector.style.display = "none";
   map.getTargetElement().style.cursor = coordToolActive ? "crosshair" : "";
   if (coordToolActive) showToast("Cliquez sur la carte pour voir les coordonnées", "info");
 }
 
-document.getElementById("btn-route").addEventListener("click", () => setValhallaMode("route"));
-document.getElementById("btn-iso").addEventListener("click",   () => setValhallaMode("iso"));
+document.getElementById("btn-route").addEventListener("click", setRouteMode);
 document.getElementById("btn-coord").addEventListener("click", setCoordMode);
 document.getElementById("btn-clear-all").addEventListener("click", () => {
   clearRoute();
-  clearIsochrones();
   activeValhallaMode = null;
   coordToolActive    = false;
   document.getElementById("btn-route").classList.remove("active");
-  document.getElementById("btn-iso").classList.remove("active");
   document.getElementById("btn-coord").classList.remove("active");
   routeTypeSelector.style.display = "none";
   map.getTargetElement().style.cursor = "";
   coordPanel.style.display = "none";
+  closePanel();
 });
 
 routeTypeSelector.querySelectorAll(".rts-btn").forEach(btn => {
@@ -459,12 +386,20 @@ map.on("singleclick", async (e) => {
   if (activeValhallaMode === "route") {
     const fromLv95   = e.coordinate;
     const candidates = getNearestCandidates(fromLv95, selectedRouteColor);
-    if (!candidates.length) { showToast("Données pas encore chargées, réessaie dans un instant.", "error"); return; }
-    showToast(`Comparaison de ${candidates.length} candidats en parallèle…`, "info");
+    if (!candidates.length) {
+      showToast("Données pas encore chargées, réessaie dans un instant.", "error");
+      return;
+    }
+    showToast(`Calcul de l'itinéraire…`, "info");
     try {
       const best = await findFastestPOI(fromLv95, selectedRouteColor);
-      if (!best || !best.data) { showToast("Aucun itinéraire trouvé.", "error"); return; }
-      displayRoute(best.data, selectedRouteColor);
+      if (!best || !best.route) {
+        showToast("Aucun itinéraire trouvé. Vérifiez votre connexion.", "error");
+        return;
+      }
+
+      displayRoute(best.route.coords, selectedRouteColor);
+
       const typeInfo = layerTypeMap[selectedRouteColor];
       elEmoji.textContent = typeInfo.emoji;
       elType.style.color  = typeInfo.color;
@@ -474,42 +409,24 @@ map.on("singleclick", async (e) => {
         props.name || props.Name || props.NAME ||
         props.bezeichnung || props.Bezeichnung ||
         props.nom || props.Nom || "Sans nom";
-      elBody.innerHTML = "";
-      const summary = best.data.trip?.summary;
-      if (summary) {
-        const mins = Math.round(summary.time / 60);
-        const km   = summary.length.toFixed(1);
-        const routeInfo = document.createElement("div");
-        routeInfo.id = "route-summary";
-        routeInfo.innerHTML = `
-          <div class="route-row">🚨 <strong>${mins} min</strong> &nbsp;·&nbsp; ${km} km</div>
-          <div class="route-note">✓ Le plus rapide parmi ${candidates.length} candidats</div>
-          <button id="clear-route-btn">✕ Effacer l'itinéraire</button>
-        `;
-        elBody.prepend(routeInfo);
-        document.getElementById("clear-route-btn").addEventListener("click", clearRoute);
-      }
-      panel.style.display = "block";
-      showToast(`Itinéraire calculé ✓  — ${Math.round(best.time / 60)} min`, "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Erreur Valhalla : " + err.message, "error");
-    }
-    return;
-  }
 
-  // Mode isochrones
-  if (activeValhallaMode === "iso") {
-    const fromLv95  = e.coordinate;
-    const fromWgs84 = lv95ToWgs84(fromLv95);
-    showToast("Calcul des isochrones…", "info");
-    try {
-      const data = await getIsochrone(fromWgs84);
-      displayIsochrones(data);
-      showToast("Isochrones affichées ✓  (5 / 10 / 15 min)", "success");
+      elBody.innerHTML = "";
+      const mins = Math.round(best.route.time / 60);
+      const km   = best.route.distance.toFixed(1);
+      const routeInfo = document.createElement("div");
+      routeInfo.id = "route-summary";
+      routeInfo.innerHTML = `
+        <div class="route-row">🚨 <strong>${mins} min</strong> &nbsp;·&nbsp; ${km} km</div>
+        <div class="route-note">✓ Le plus rapide parmi ${candidates.length} candidats</div>
+        <button id="clear-route-btn">✕ Effacer l'itinéraire</button>
+      `;
+      elBody.prepend(routeInfo);
+      document.getElementById("clear-route-btn").addEventListener("click", clearRoute);
+      panel.style.display = "block";
+      showToast(`Itinéraire calculé ✓  — ${mins} min · ${km} km`, "success");
     } catch (err) {
       console.error(err);
-      showToast("Erreur isochrones : " + err.message, "error");
+      showToast("Erreur de routage : " + err.message, "error");
     }
     return;
   }
