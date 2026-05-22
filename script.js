@@ -47,9 +47,9 @@ const selectedStyleMap = {
 const defaultStyleMap = { blue: blueStyle, green: greenStyle, red: redStyle };
 
 const layerTypeMap = {
-  red:   { label: "Caserne de pompiers", emoji: "🚒", color: "#e02424" },
-  blue:  { label: "Poste de police",     emoji: "👮", color: "#1a56db" },
-  green: { label: "Hôpital",             emoji: "🏥", color: "#057a55" },
+  red:   { label: "Caserne de pompiers", emoji: "", color: "#e02424" },
+  blue:  { label: "Poste de police",     emoji: "", color: "#1a56db" },
+  green: { label: "Hôpital",             emoji: "", color: "#057a55" },
 };
 
 // ── DOM panneau POI ──
@@ -187,28 +187,28 @@ function showToast(msg, type = "info") {
 const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
-  <button id="btn-route" class="vtool-btn" title="Activer le mode itinéraire">🚨 Itinéraire</button>
+  <button id="btn-route" class="vtool-btn" title="Activer le mode itinéraire">Itinéraire</button>
 
   <div id="service-checks" style="display:none;">
     <label class="svc-check-label" title="Pompiers">
       <input type="checkbox" class="svc-check" data-color="red" checked>
       <span class="svc-dot" style="background:#e02424;"></span>
-      🚒
+      Pompiers
     </label>
     <label class="svc-check-label" title="Police">
       <input type="checkbox" class="svc-check" data-color="blue" checked>
       <span class="svc-dot" style="background:#1a56db;"></span>
-      👮
+      Police
     </label>
     <label class="svc-check-label" title="Hôpital">
       <input type="checkbox" class="svc-check" data-color="green" checked>
       <span class="svc-dot" style="background:#057a55;"></span>
-      🏥
+      Hôpital
     </label>
     <span class="svc-hint">Cliquez sur la carte</span>
   </div>
 
-  <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">✕ Effacer</button>
+  <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">Effacer</button>
 `;
 document.getElementById("map").appendChild(valhallaToolbar);
 
@@ -218,7 +218,6 @@ multiRoutePanel.id = "multi-route-panel";
 multiRoutePanel.style.display = "none";
 multiRoutePanel.innerHTML = `
   <div id="mrp-header">
-    <span style="font-size:16px;">📍</span>
     <div style="font-weight:600; font-size:14px; color:#111;">Itinéraires calculés</div>
     <button id="mrp-close">×</button>
   </div>
@@ -226,21 +225,21 @@ multiRoutePanel.innerHTML = `
     <div class="mrp-row" id="mrp-row-red">
       <div class="mrp-service">
         <span class="mrp-dot-sm" style="background:#e02424;"></span>
-        <span>🚒 Pompiers</span>
+        <span>Pompiers</span>
       </div>
       <div class="mrp-result" id="mrp-result-red"><span class="mrp-wait">—</span></div>
     </div>
     <div class="mrp-row" id="mrp-row-blue">
       <div class="mrp-service">
         <span class="mrp-dot-sm" style="background:#1a56db;"></span>
-        <span>👮 Police</span>
+        <span>Police</span>
       </div>
       <div class="mrp-result" id="mrp-result-blue"><span class="mrp-wait">—</span></div>
     </div>
     <div class="mrp-row" id="mrp-row-green">
       <div class="mrp-service">
         <span class="mrp-dot-sm" style="background:#057a55;"></span>
-        <span>🏥 Hôpital</span>
+        <span>Hôpital</span>
       </div>
       <div class="mrp-result" id="mrp-result-green"><span class="mrp-wait">—</span></div>
     </div>
