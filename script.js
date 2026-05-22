@@ -182,7 +182,6 @@ const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
   <button id="btn-route" class="vtool-btn" title="Calculer l'itinéraire vers le service le plus proche">🚨 Itinéraire</button>
-  <button id="btn-coord" class="vtool-btn" title="Afficher les coordonnées d'un point">📍 Coordonnées</button>
   <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">✕ Effacer</button>
 `;
 document.getElementById("map").appendChild(valhallaToolbar);
@@ -199,33 +198,7 @@ routeTypeSelector.innerHTML = `
 `;
 document.getElementById("map").appendChild(routeTypeSelector);
 
-// ── Panneau coordonnées ──
-const coordPanel = document.createElement("div");
-coordPanel.id = "coord-panel";
-coordPanel.style.cssText = `
-  position:absolute; top:12px; right:12px; width:260px;
-  background:white; border-radius:10px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.18);
-  font-family:'Segoe UI',Arial,sans-serif; overflow:hidden;
-  display:none; z-index:1000;
-`;
-coordPanel.innerHTML = `
-  <div style="padding:12px 16px 8px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:8px;">
-    <span style="font-size:18px;">📍</span>
-    <div style="font-size:13px; font-weight:600; color:#111;">Coordonnées du point</div>
-    <button id="coord-close" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:#aaa;padding:0;line-height:1;">×</button>
-  </div>
-  <div style="padding:12px 16px; font-size:13px;">
-    <div style="color:#888; font-size:11px; margin-bottom:2px;">LV95 (EPSG:2056)</div>
-    <div id="coord-lv95" style="font-weight:600; color:#111; margin-bottom:8px;">—</div>
-    <div style="color:#888; font-size:11px; margin-bottom:2px;">WGS 84 (lat, lon)</div>
-    <div id="coord-wgs84" style="font-weight:600; color:#111;">—</div>
-  </div>
-`;
-document.getElementById("map").appendChild(coordPanel);
-document.getElementById("coord-close").addEventListener("click", () => {
-  coordPanel.style.display = "none";
-});
+
 
 // ── Barre de recherche ──
 const searchBar = document.createElement("div");
@@ -335,27 +308,14 @@ function setRouteMode() {
   if (!wasActive) showToast("Cliquez sur la carte pour calculer l'itinéraire", "info");
 }
 
-function setCoordMode() {
-  coordToolActive    = !coordToolActive;
-  activeValhallaMode = null;
-  document.getElementById("btn-coord").classList.toggle("active", coordToolActive);
-  document.getElementById("btn-route").classList.remove("active");
-  routeTypeSelector.style.display = "none";
-  map.getTargetElement().style.cursor = coordToolActive ? "crosshair" : "";
-  if (coordToolActive) showToast("Cliquez sur la carte pour voir les coordonnées", "info");
-}
-
 document.getElementById("btn-route").addEventListener("click", setRouteMode);
-document.getElementById("btn-coord").addEventListener("click", setCoordMode);
 document.getElementById("btn-clear-all").addEventListener("click", () => {
   clearRoute();
   activeValhallaMode = null;
   coordToolActive    = false;
   document.getElementById("btn-route").classList.remove("active");
-  document.getElementById("btn-coord").classList.remove("active");
   routeTypeSelector.style.display = "none";
   map.getTargetElement().style.cursor = "";
-  coordPanel.style.display = "none";
   closePanel();
 });
 
@@ -369,18 +329,6 @@ routeTypeSelector.querySelectorAll(".rts-btn").forEach(btn => {
 
 // ── Clic carte ──
 map.on("singleclick", async (e) => {
-
-  // Mode coordonnées
-  if (coordToolActive) {
-    const lv95  = e.coordinate;
-    const wgs84 = lv95ToWgs84(lv95);
-    document.getElementById("coord-lv95").textContent =
-      `E ${Math.round(lv95[0]).toLocaleString("fr-CH")}  /  N ${Math.round(lv95[1]).toLocaleString("fr-CH")}`;
-    document.getElementById("coord-wgs84").textContent =
-      `${wgs84[1].toFixed(6)}, ${wgs84[0].toFixed(6)}`;
-    coordPanel.style.display = "block";
-    return;
-  }
 
   // Mode itinéraire
   if (activeValhallaMode === "route") {

@@ -419,3 +419,10 @@ header {
   color: #057a55;
   font-style: italic;
 }
+
+/* ── Zoom controls à droite ── */
+.ol-zoom {
+  top: 14px;
+  left: auto !important;
+  right: 12px;
+}
