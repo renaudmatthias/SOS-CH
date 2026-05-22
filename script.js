@@ -187,9 +187,7 @@ function showToast(msg, type = "info") {
 const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
-  <button id="btn-route" class="vtool-btn" title="Activer le mode itinéraire">Itinéraire</button>
-
-  <div id="service-checks" style="display:none;">
+  <div id="service-checks">
     <label class="svc-check-label" title="Pompiers">
       <input type="checkbox" class="svc-check" data-color="red" checked>
       <span class="svc-dot" style="background:#e02424;"></span>
@@ -205,7 +203,6 @@ valhallaToolbar.innerHTML = `
       <span class="svc-dot" style="background:#057a55;"></span>
       Hôpital
     </label>
-    <span class="svc-hint">Cliquez sur la carte</span>
   </div>
 
   <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">Effacer</button>
@@ -249,35 +246,20 @@ multiRoutePanel.innerHTML = `
 document.getElementById("map").appendChild(multiRoutePanel);
 
 // ── Logique toolbar ──
-let activeValhallaMode = null;
 const serviceChecks = document.getElementById("service-checks");
+
+// Le mode itinéraire est toujours actif — curseur crosshair permanent
+map.once("rendercomplete", () => {
+  map.getTargetElement().style.cursor = "crosshair";
+});
 
 function getSelectedColors() {
   return [...document.querySelectorAll(".svc-check:checked")].map(cb => cb.dataset.color);
 }
 
-function setRouteMode() {
-  const wasActive = activeValhallaMode === "route";
-  activeValhallaMode = wasActive ? null : "route";
-  document.getElementById("btn-route").classList.toggle("active", !wasActive);
-  serviceChecks.style.display = wasActive ? "none" : "flex";
-  map.getTargetElement().style.cursor = wasActive ? "" : "crosshair";
-  if (wasActive) {
-    clearAllRoutes();
-    clickMarkerSource.clear();
-    multiRoutePanel.style.display = "none";
-  }
-}
-
-document.getElementById("btn-route").addEventListener("click", setRouteMode);
-
 document.getElementById("btn-clear-all").addEventListener("click", () => {
   clearAllRoutes();
   clickMarkerSource.clear();
-  activeValhallaMode = null;
-  document.getElementById("btn-route").classList.remove("active");
-  serviceChecks.style.display = "none";
-  map.getTargetElement().style.cursor = "";
   multiRoutePanel.style.display = "none";
   closePanel();
 });
@@ -286,7 +268,6 @@ document.getElementById("mrp-close").addEventListener("click", () => {
   multiRoutePanel.style.display = "none";
   clearAllRoutes();
   clickMarkerSource.clear();
-  // On reste en mode route pour pouvoir recliquer
 });
 
 // Re-afficher/masquer les routes au changement de case (depuis la toolbar)
@@ -379,21 +360,17 @@ async function computeMultiRoutes(fromLv95) {
 
 // ── Clic carte ──
 map.on("singleclick", async e => {
-  if (activeValhallaMode === "route") {
-    await computeMultiRoutes(e.coordinate);
-    return;
-  }
-
-  // Clic normal sur un POI
+  // Si clic sur un POI, afficher ses infos
   let found = false;
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
     if (found || layer === clickMarkerLayer) return;
+    if (!layer.get("poiColor")) return;
     found = true;
     if (selectedFeature) selectedFeature.setStyle(defaultStyleMap[selectedColor]);
     selectedFeature = feature;
     selectedColor   = layer.get("poiColor");
     feature.setStyle(selectedStyleMap[selectedColor]);
-    const typeInfo = layerTypeMap[selectedColor] || { label: "Point d'intérêt", emoji: "📍", color: "#666" };
+    const typeInfo = layerTypeMap[selectedColor] || { label: "Point d'intérêt", emoji: "", color: "#666" };
     elEmoji.textContent     = typeInfo.emoji;
     elType.style.color      = typeInfo.color;
     elType.textContent      = typeInfo.label;
@@ -416,7 +393,9 @@ map.on("singleclick", async e => {
     }
     panel.style.display = "block";
   });
-  if (!found) closePanel();
+
+  // Dans tous les cas, calculer les itinéraires depuis ce point
+  await computeMultiRoutes(e.coordinate);
 });
 
 function formatKey(key) {
