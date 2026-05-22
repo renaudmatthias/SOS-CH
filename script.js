@@ -378,89 +378,6 @@ async function computeMultiRoutes(fromLv95) {
   }));
 }
 
-// ── Barre de recherche ──
-const searchBar = document.createElement("div");
-searchBar.id = "search-bar";
-searchBar.innerHTML = `
-  <div id="search-input-wrap">
-    <span id="search-icon">🔍</span>
-    <input id="search-input" type="text" placeholder="Rechercher une adresse en Suisse…" autocomplete="off" />
-    <button id="search-clear">×</button>
-  </div>
-  <ul id="search-results"></ul>
-`;
-document.getElementById("map").appendChild(searchBar);
-
-const searchMarkerSource = new ol.source.Vector();
-const searchMarkerLayer  = new ol.layer.Vector({
-  source: searchMarkerSource,
-  zIndex: 600,
-  style: new ol.style.Style({
-    image: new ol.style.RegularShape({
-      points: 4, radius: 10, radius2: 0, angle: Math.PI / 4,
-      fill:   new ol.style.Fill({ color: "#ff6600" }),
-      stroke: new ol.style.Stroke({ color: "white", width: 2 }),
-    }),
-  }),
-});
-map.addLayer(searchMarkerLayer);
-
-const searchInput   = document.getElementById("search-input");
-const searchClear   = document.getElementById("search-clear");
-const searchResults = document.getElementById("search-results");
-let searchTimeout   = null;
-
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.trim();
-  searchClear.style.display = q ? "flex" : "none";
-  clearTimeout(searchTimeout);
-  if (q.length < 2) { searchResults.style.display = "none"; return; }
-  searchTimeout = setTimeout(() => doSearch(q), 300);
-});
-
-searchClear.addEventListener("click", () => {
-  searchInput.value = "";
-  searchClear.style.display = "none";
-  searchResults.style.display = "none";
-  searchMarkerSource.clear();
-});
-
-document.addEventListener("click", e => {
-  if (!searchBar.contains(e.target)) searchResults.style.display = "none";
-});
-
-async function doSearch(q) {
-  searchResults.innerHTML = `<li class="search-loading">Recherche…</li>`;
-  searchResults.style.display = "block";
-  try {
-    const url  = `https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${encodeURIComponent(q)}&type=locations&sr=2056&limit=6&lang=fr`;
-    const data = await (await fetch(url)).json();
-    const results = data.results || [];
-    if (!results.length) { searchResults.innerHTML = `<li class="search-no-result">Aucun résultat</li>`; return; }
-    searchResults.innerHTML = "";
-    results.forEach(r => {
-      const attrs = r.attrs;
-      const li    = document.createElement("li");
-      li.innerHTML = `
-        <span class="result-icon">📍</span>
-        <div class="result-text">
-          <span class="result-main">${attrs.label.replace(/<[^>]+>/g, "")}</span>
-          <span class="result-sub">${attrs.detail || ""}</span>
-        </div>`;
-      li.addEventListener("click", () => {
-        const coord = [attrs.y, attrs.x];
-        map.getView().animate({ center: coord, zoom: 14, duration: 600 });
-        searchMarkerSource.clear();
-        searchMarkerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(coord) }));
-        searchInput.value = attrs.label.replace(/<[^>]+>/g, "");
-        searchClear.style.display = "flex";
-        searchResults.style.display = "none";
-      });
-      searchResults.appendChild(li);
-    });
-  } catch { searchResults.innerHTML = `<li class="search-no-result">Erreur de recherche</li>`; }
-}
-
 // ── Clic carte ──
 map.on("singleclick", async e => {
   if (activeValhallaMode === "route") {
@@ -471,7 +388,7 @@ map.on("singleclick", async e => {
   // Clic normal sur un POI
   let found = false;
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
-    if (found || layer === searchMarkerLayer || layer === clickMarkerLayer) return;
+    if (found || layer === clickMarkerLayer) return;
     found = true;
     if (selectedFeature) selectedFeature.setStyle(defaultStyleMap[selectedColor]);
     selectedFeature = feature;
