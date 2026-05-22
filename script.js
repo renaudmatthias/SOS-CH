@@ -1,5 +1,4 @@
-// ── Routing : OSRM public (fallback: valhalla2) ──
-// OSRM : router.project-osrm.org — format /route/v1/driving/lon1,lat1;lon2,lat2
+// ── Routing : OSRM public ──
 const OSRM_BASE = "https://router.project-osrm.org";
 
 // ── Projection LV95 ──
@@ -74,14 +73,35 @@ function closePanel() {
 }
 btnClose.addEventListener("click", closePanel);
 
-// ── Couche itinéraire ──
-let routeLayer = null;
+// ── Couches itinéraires multiples ──
+// Un layer par couleur de service
+const routeLayers = { red: null, blue: null, green: null };
 
-function clearRoute() {
-  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-  const rs = document.getElementById("route-summary");
-  if (rs) rs.remove();
+function clearRouteForColor(color) {
+  if (routeLayers[color]) {
+    map.removeLayer(routeLayers[color]);
+    routeLayers[color] = null;
+  }
 }
+
+function clearAllRoutes() {
+  Object.keys(routeLayers).forEach(clearRouteForColor);
+}
+
+// ── Marqueur point cliqué ──
+const clickMarkerSource = new ol.source.Vector();
+const clickMarkerLayer = new ol.layer.Vector({
+  source: clickMarkerSource,
+  zIndex: 700,
+  style: new ol.style.Style({
+    image: new ol.style.RegularShape({
+      points: 4, radius: 12, radius2: 0, angle: Math.PI / 4,
+      fill:   new ol.style.Fill({ color: "#ff6600" }),
+      stroke: new ol.style.Stroke({ color: "white", width: 2 }),
+    }),
+  }),
+});
+map.addLayer(clickMarkerLayer);
 
 // ── Conversion ──
 function lv95ToWgs84(coord) { return ol.proj.transform(coord, "EPSG:2056", "EPSG:4326"); }
@@ -106,7 +126,6 @@ function getNearestCandidates(lv95Coord, color, n = CANDIDATES) {
 }
 
 // ── Appel OSRM /route ──
-// Retourne { time (secondes), distance (km), geometry (coordonnées WGS84 [[lon,lat]...]) }
 async function getRouteOSRM(fromWgs84, toWgs84) {
   const url = `${OSRM_BASE}/route/v1/driving/` +
     `${fromWgs84[0]},${fromWgs84[1]};${toWgs84[0]},${toWgs84[1]}` +
@@ -117,9 +136,9 @@ async function getRouteOSRM(fromWgs84, toWgs84) {
   if (data.code !== "Ok" || !data.routes?.length) throw new Error("OSRM: pas d'itinéraire");
   const route = data.routes[0];
   return {
-    time:     route.duration,                         // secondes
-    distance: route.distance / 1000,                 // km
-    coords:   route.geometry.coordinates,            // [[lon, lat], ...]
+    time:     route.duration,
+    distance: route.distance / 1000,
+    coords:   route.geometry.coordinates,
   };
 }
 
@@ -145,9 +164,9 @@ async function findFastestPOI(fromLv95, color) {
   return results.reduce((best, r) => (r.time < best.time ? r : best), results[0]);
 }
 
-// ── Afficher l'itinéraire ──
-function displayRoute(coords, color) {
-  clearRoute();
+// ── Afficher un itinéraire pour une couleur ──
+function displayRouteForColor(coords, color) {
+  clearRouteForColor(color);
   const typeColors = { blue: "#1a56db", green: "#057a55", red: "#e02424" };
   const lineColor  = typeColors[color] || "#ff6600";
 
@@ -158,11 +177,11 @@ function displayRoute(coords, color) {
     new ol.style.Style({ stroke: new ol.style.Stroke({ color: lineColor, width: 4, lineDash: [12, 6] }) }),
   ]);
 
-  routeLayer = new ol.layer.Vector({
+  routeLayers[color] = new ol.layer.Vector({
     source: new ol.source.Vector({ features: [feature] }),
     zIndex: 500,
   });
-  map.addLayer(routeLayer);
+  map.addLayer(routeLayers[color]);
 }
 
 // ── Toast ──
@@ -181,24 +200,93 @@ function showToast(msg, type = "info") {
 const valhallaToolbar = document.createElement("div");
 valhallaToolbar.id = "valhalla-toolbar";
 valhallaToolbar.innerHTML = `
-  <button id="btn-route" class="vtool-btn" title="Calculer l'itinéraire vers le service le plus proche">🚨 Itinéraire</button>
+  <button id="btn-route" class="vtool-btn" title="Calculer les itinéraires vers les services d'urgence">🚨 Itinéraire</button>
   <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">✕ Effacer</button>
 `;
 document.getElementById("map").appendChild(valhallaToolbar);
 
-// ── Sélecteur type POI ──
-const routeTypeSelector = document.createElement("div");
-routeTypeSelector.id = "route-type-selector";
-routeTypeSelector.style.display = "none";
-routeTypeSelector.innerHTML = `
-  <span class="rts-label">Vers :</span>
-  <button class="rts-btn" data-color="red">🚒 Pompiers</button>
-  <button class="rts-btn" data-color="blue">👮 Police</button>
-  <button class="rts-btn selected" data-color="green">🏥 Hôpital</button>
+// ── Panneau multi-itinéraires ──
+const multiRoutePanel = document.createElement("div");
+multiRoutePanel.id = "multi-route-panel";
+multiRoutePanel.style.display = "none";
+multiRoutePanel.innerHTML = `
+  <div id="mrp-header">
+    <span style="font-size:16px;">🚨</span>
+    <div style="font-weight:600; font-size:14px; color:#111;">Services d'urgence</div>
+    <button id="mrp-close">×</button>
+  </div>
+  <div id="mrp-subtext">Cochez les services pour afficher les itinéraires</div>
+  <div id="mrp-rows">
+    <div class="mrp-row" id="mrp-row-red">
+      <label class="mrp-label">
+        <input type="checkbox" class="mrp-check" data-color="red" checked>
+        <span class="mrp-dot" style="background:#e02424;"></span>
+        <span>🚒 Pompiers</span>
+      </label>
+      <div class="mrp-result" id="mrp-result-red">
+        <span class="mrp-loading">Calcul…</span>
+      </div>
+    </div>
+    <div class="mrp-row" id="mrp-row-blue">
+      <label class="mrp-label">
+        <input type="checkbox" class="mrp-check" data-color="blue" checked>
+        <span class="mrp-dot" style="background:#1a56db;"></span>
+        <span>👮 Police</span>
+      </label>
+      <div class="mrp-result" id="mrp-result-blue">
+        <span class="mrp-loading">Calcul…</span>
+      </div>
+    </div>
+    <div class="mrp-row" id="mrp-row-green">
+      <label class="mrp-label">
+        <input type="checkbox" class="mrp-check" data-color="green" checked>
+        <span class="mrp-dot" style="background:#057a55;"></span>
+        <span>🏥 Hôpital</span>
+      </label>
+      <div class="mrp-result" id="mrp-result-green">
+        <span class="mrp-loading">Calcul…</span>
+      </div>
+    </div>
+  </div>
+  <button id="mrp-clear-btn">✕ Effacer les itinéraires</button>
 `;
-document.getElementById("map").appendChild(routeTypeSelector);
+document.getElementById("map").appendChild(multiRoutePanel);
 
+document.getElementById("mrp-close").addEventListener("click", () => {
+  multiRoutePanel.style.display = "none";
+  clearAllRoutes();
+  clickMarkerSource.clear();
+  activeValhallaMode = null;
+  document.getElementById("btn-route").classList.remove("active");
+  map.getTargetElement().style.cursor = "";
+});
 
+document.getElementById("mrp-clear-btn").addEventListener("click", () => {
+  clearAllRoutes();
+  clickMarkerSource.clear();
+  // Reset result labels
+  ["red","blue","green"].forEach(c => {
+    document.getElementById(`mrp-result-${c}`).innerHTML = `<span class="mrp-loading">—</span>`;
+  });
+  document.getElementById("mrp-subtext").textContent = "Cliquez sur la carte pour calculer";
+});
+
+// ── Gestion des cases à cocher ──
+// Stocker les derniers résultats de route pour pouvoir re-afficher/masquer
+const lastRouteResults = { red: null, blue: null, green: null };
+
+multiRoutePanel.querySelectorAll(".mrp-check").forEach(checkbox => {
+  checkbox.addEventListener("change", () => {
+    const color = checkbox.dataset.color;
+    if (checkbox.checked) {
+      if (lastRouteResults[color]) {
+        displayRouteForColor(lastRouteResults[color].coords, color);
+      }
+    } else {
+      clearRouteForColor(color);
+    }
+  });
+});
 
 // ── Barre de recherche ──
 const searchBar = document.createElement("div");
@@ -277,7 +365,7 @@ async function doSearch(q) {
         </div>
       `;
       li.addEventListener("click", () => {
-        const coord = [attrs.y, attrs.x]; // geo.admin: y=Est, x=Nord
+        const coord = [attrs.y, attrs.x];
         map.getView().animate({ center: coord, zoom: 14, duration: 600 });
         searchMarkerSource.clear();
         searchMarkerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(coord) }));
@@ -294,88 +382,97 @@ async function doSearch(q) {
 
 // ── États modes ──
 let activeValhallaMode = null;
-let selectedRouteColor = "green";
-let coordToolActive    = false;
 
 function setRouteMode() {
   const wasActive = activeValhallaMode === "route";
   activeValhallaMode = wasActive ? null : "route";
-  coordToolActive    = false;
   document.getElementById("btn-route").classList.toggle("active", !wasActive);
-  document.getElementById("btn-coord").classList.remove("active");
-  routeTypeSelector.style.display = activeValhallaMode === "route" ? "flex" : "none";
   map.getTargetElement().style.cursor = activeValhallaMode ? "crosshair" : "";
-  if (!wasActive) showToast("Cliquez sur la carte pour calculer l'itinéraire", "info");
+  if (!wasActive) showToast("Cliquez sur la carte pour calculer les itinéraires", "info");
+  else {
+    multiRoutePanel.style.display = "none";
+    clearAllRoutes();
+    clickMarkerSource.clear();
+  }
 }
 
 document.getElementById("btn-route").addEventListener("click", setRouteMode);
 document.getElementById("btn-clear-all").addEventListener("click", () => {
-  clearRoute();
+  clearAllRoutes();
+  clickMarkerSource.clear();
   activeValhallaMode = null;
-  coordToolActive    = false;
   document.getElementById("btn-route").classList.remove("active");
-  routeTypeSelector.style.display = "none";
   map.getTargetElement().style.cursor = "";
+  multiRoutePanel.style.display = "none";
   closePanel();
 });
 
-routeTypeSelector.querySelectorAll(".rts-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    selectedRouteColor = btn.dataset.color;
-    routeTypeSelector.querySelectorAll(".rts-btn").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
+// ── Calcul multi-itinéraires depuis un point ──
+async function computeMultiRoutes(fromLv95) {
+  const colors = ["red", "blue", "green"];
+
+  // Réinitialiser le panneau
+  colors.forEach(color => {
+    const cb = multiRoutePanel.querySelector(`.mrp-check[data-color="${color}"]`);
+    cb.checked = true;
+    document.getElementById(`mrp-result-${color}`).innerHTML = `<span class="mrp-loading">Calcul…</span>`;
+    clearRouteForColor(color);
+    lastRouteResults[color] = null;
   });
-});
+
+  // Placer le marqueur
+  clickMarkerSource.clear();
+  clickMarkerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(fromLv95) }));
+
+  // Afficher le panneau
+  multiRoutePanel.style.display = "block";
+  document.getElementById("mrp-subtext").textContent = "Calcul en cours…";
+
+  // Calculer chaque service en parallèle
+  await Promise.all(colors.map(async color => {
+    try {
+      const candidates = getNearestCandidates(fromLv95, color);
+      if (!candidates.length) {
+        document.getElementById(`mrp-result-${color}`).innerHTML =
+          `<span class="mrp-error">Données non chargées</span>`;
+        return;
+      }
+      const best = await findFastestPOI(fromLv95, color);
+      if (!best || !best.route) {
+        document.getElementById(`mrp-result-${color}`).innerHTML =
+          `<span class="mrp-error">Aucun itinéraire</span>`;
+        return;
+      }
+      // Stocker et afficher
+      lastRouteResults[color] = best.route;
+      const cb = multiRoutePanel.querySelector(`.mrp-check[data-color="${color}"]`);
+      if (cb.checked) displayRouteForColor(best.route.coords, color);
+
+      const mins = Math.round(best.route.time / 60);
+      const km   = best.route.distance.toFixed(1);
+      const props = best.feature.getProperties();
+      const name  = props.name || props.Name || props.NAME ||
+                    props.bezeichnung || props.Bezeichnung ||
+                    props.nom || props.Nom || "Sans nom";
+
+      document.getElementById(`mrp-result-${color}`).innerHTML = `
+        <div class="mrp-time"><strong>${mins} min</strong> · ${km} km</div>
+        <div class="mrp-name">${name}</div>
+      `;
+    } catch (err) {
+      document.getElementById(`mrp-result-${color}`).innerHTML =
+        `<span class="mrp-error">Erreur : ${err.message}</span>`;
+    }
+  }));
+
+  document.getElementById("mrp-subtext").textContent = "Cliquez sur la carte pour un nouveau point";
+}
 
 // ── Clic carte ──
 map.on("singleclick", async (e) => {
-
-  // Mode itinéraire
+  // Mode itinéraire multi
   if (activeValhallaMode === "route") {
-    const fromLv95   = e.coordinate;
-    const candidates = getNearestCandidates(fromLv95, selectedRouteColor);
-    if (!candidates.length) {
-      showToast("Données pas encore chargées, réessaie dans un instant.", "error");
-      return;
-    }
-    showToast(`Calcul de l'itinéraire…`, "info");
-    try {
-      const best = await findFastestPOI(fromLv95, selectedRouteColor);
-      if (!best || !best.route) {
-        showToast("Aucun itinéraire trouvé. Vérifiez votre connexion.", "error");
-        return;
-      }
-
-      displayRoute(best.route.coords, selectedRouteColor);
-
-      const typeInfo = layerTypeMap[selectedRouteColor];
-      elEmoji.textContent = typeInfo.emoji;
-      elType.style.color  = typeInfo.color;
-      elType.textContent  = typeInfo.label;
-      const props = best.feature.getProperties();
-      elName.textContent  =
-        props.name || props.Name || props.NAME ||
-        props.bezeichnung || props.Bezeichnung ||
-        props.nom || props.Nom || "Sans nom";
-
-      elBody.innerHTML = "";
-      const mins = Math.round(best.route.time / 60);
-      const km   = best.route.distance.toFixed(1);
-      const routeInfo = document.createElement("div");
-      routeInfo.id = "route-summary";
-      routeInfo.innerHTML = `
-        <div class="route-row">🚨 <strong>${mins} min</strong> &nbsp;·&nbsp; ${km} km</div>
-        <div class="route-note">✓ Le plus rapide parmi ${candidates.length} candidats</div>
-        <button id="clear-route-btn">✕ Effacer l'itinéraire</button>
-      `;
-      elBody.prepend(routeInfo);
-      document.getElementById("clear-route-btn").addEventListener("click", clearRoute);
-      panel.style.display = "block";
-      showToast(`Itinéraire calculé ✓  — ${mins} min · ${km} km`, "success");
-    } catch (err) {
-      console.error(err);
-      showToast("Erreur de routage : " + err.message, "error");
-    }
+    await computeMultiRoutes(e.coordinate);
     return;
   }
 
@@ -383,7 +480,7 @@ map.on("singleclick", async (e) => {
   let found = false;
   map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
     if (found) return;
-    if (layer === searchMarkerLayer) return;
+    if (layer === searchMarkerLayer || layer === clickMarkerLayer) return;
     found = true;
 
     if (selectedFeature) selectedFeature.setStyle(defaultStyleMap[selectedColor]);
