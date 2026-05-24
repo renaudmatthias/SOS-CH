@@ -360,41 +360,6 @@ async function computeMultiRoutes(fromLv95) {
 
 // ── Clic carte ──
 map.on("singleclick", async e => {
-  // Si clic sur un POI, afficher ses infos
-  let found = false;
-  map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
-    if (found || layer === clickMarkerLayer) return;
-    if (!layer.get("poiColor")) return;
-    found = true;
-    if (selectedFeature) selectedFeature.setStyle(defaultStyleMap[selectedColor]);
-    selectedFeature = feature;
-    selectedColor   = layer.get("poiColor");
-    feature.setStyle(selectedStyleMap[selectedColor]);
-    const typeInfo = layerTypeMap[selectedColor] || { label: "Point d'intérêt", emoji: "", color: "#666" };
-    elEmoji.textContent     = typeInfo.emoji;
-    elType.style.color      = typeInfo.color;
-    elType.textContent      = typeInfo.label;
-    const props = feature.getProperties();
-    elName.textContent = props.name || props.Name || props.NAME ||
-      props.bezeichnung || props.Bezeichnung || props.nom || props.Nom || "Sans nom";
-    const excluded = new Set(["geometry","name","Name","NAME","nom","Nom","bezeichnung","Bezeichnung"]);
-    const entries  = Object.entries(props).filter(([k,v]) => !excluded.has(k) && v != null && v !== "");
-    elBody.innerHTML = "";
-    if (!entries.length) {
-      elBody.innerHTML = "<p>Aucune information supplémentaire disponible.</p>";
-    } else {
-      const table = document.createElement("table");
-      entries.forEach(([k, v]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${formatKey(k)}</td><td>${v}</td>`;
-        table.appendChild(tr);
-      });
-      elBody.appendChild(table);
-    }
-    panel.style.display = "block";
-  });
-
-  // Dans tous les cas, calculer les itinéraires depuis ce point
   await computeMultiRoutes(e.coordinate);
 });
 
