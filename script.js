@@ -74,7 +74,7 @@ function closePanel() {
 btnClose.addEventListener("click", closePanel);
 
 // ── Couches itinéraires (une par service) ──
-const routeLayers = { red: null, blue: null, green: null };
+const routeLayers      = { red: null, blue: null, green: null };
 const lastRouteResults = { red: null, blue: null, green: null };
 
 function clearRouteForColor(color) {
@@ -108,7 +108,7 @@ const clickMarkerLayer  = new ol.layer.Vector({
 });
 map.addLayer(clickMarkerLayer);
 
-// ── Conversion ──
+// ── Conversion de coordonnées ──
 function lv95ToWgs84(coord) { return ol.proj.transform(coord, "EPSG:2056", "EPSG:4326"); }
 function wgs84ToLv95(coord) { return ol.proj.transform(coord, "EPSG:4326", "EPSG:2056"); }
 
@@ -130,8 +130,8 @@ function getNearestCandidates(lv95Coord, color, n = CANDIDATES) {
     .map(x => x.feature);
 }
 
-// ── OSRM ──
-async function getRouteOSRM(fromWgs84, toWgs84) {
+// ── OSRM : calcul d'itinéraire ──
+async function fetchRouteOSRM(fromWgs84, toWgs84) {
   const url = `${OSRM_BASE}/route/v1/driving/` +
     `${fromWgs84[0]},${fromWgs84[1]};${toWgs84[0]},${toWgs84[1]}` +
     `?overview=full&geometries=geojson`;
@@ -143,20 +143,22 @@ async function getRouteOSRM(fromWgs84, toWgs84) {
   return { time: route.duration, distance: route.distance / 1000, coords: route.geometry.coordinates };
 }
 
+// ── OSRM : trouver le POI le plus rapide parmi les candidats ──
 async function findFastestPOI(fromLv95, color) {
   const candidates = getNearestCandidates(fromLv95, color);
   if (!candidates.length) return null;
   const fromWgs84 = lv95ToWgs84(fromLv95);
   const results = await Promise.all(candidates.map(async f => {
     try {
-      const route = await getRouteOSRM(fromWgs84, lv95ToWgs84(f.getGeometry().getCoordinates()));
+      const route = await fetchRouteOSRM(fromWgs84, lv95ToWgs84(f.getGeometry().getCoordinates()));
       return { feature: f, route, time: route.time };
     } catch { return { feature: f, route: null, time: Infinity }; }
   }));
   return results.reduce((best, r) => r.time < best.time ? r : best, results[0]);
 }
 
-function displayRouteForColor(coords, color) {
+// ── Affichage d'un itinéraire sur la carte ──
+function displayRouteOnMap(coords, color) {
   clearRouteForColor(color);
   const lineColors = { blue: "#1a56db", green: "#057a55", red: "#e02424" };
   const lv95Coords = coords.map(([lon, lat]) => wgs84ToLv95([lon, lat]));
@@ -169,84 +171,19 @@ function displayRouteForColor(coords, color) {
   map.addLayer(routeLayers[color]);
 }
 
-// ── Toast ──
+// ── Toast notifications ──
+let toastTimer = null;
 function showToast(msg, type = "info") {
-  const existing = document.getElementById("valhalla-toast");
-  if (existing) existing.remove();
-  const toast = document.createElement("div");
-  toast.id = "valhalla-toast";
-  toast.className = `toast-${type}`;
-  toast.textContent = msg;
-  document.getElementById("map").appendChild(toast);
-  setTimeout(() => toast.remove(), 3200);
+  const toast = document.getElementById("routing-toast");
+  if (toastTimer) clearTimeout(toastTimer);
+  toast.textContent  = msg;
+  toast.className    = `toast-${type}`;
+  toastTimer = setTimeout(() => {
+    toast.className = "toast-hidden";
+  }, 3200);
 }
 
-// ══════════════════════════════════════════════
-// ── Toolbar avec cases à cocher intégrées ──
-// ══════════════════════════════════════════════
-const valhallaToolbar = document.createElement("div");
-valhallaToolbar.id = "valhalla-toolbar";
-valhallaToolbar.innerHTML = `
-  <div id="service-checks">
-    <label class="svc-check-label" title="Pompiers">
-      <input type="checkbox" class="svc-check" data-color="red" checked>
-      <span class="svc-dot" style="background:#e02424;"></span>
-      Pompiers
-    </label>
-    <label class="svc-check-label" title="Police">
-      <input type="checkbox" class="svc-check" data-color="blue" checked>
-      <span class="svc-dot" style="background:#1a56db;"></span>
-      Police
-    </label>
-    <label class="svc-check-label" title="Hôpital">
-      <input type="checkbox" class="svc-check" data-color="green" checked>
-      <span class="svc-dot" style="background:#057a55;"></span>
-      Hôpital
-    </label>
-  </div>
-
-  <button id="btn-clear-all" class="vtool-btn vtool-clear" title="Tout effacer">Effacer</button>
-`;
-document.getElementById("map").appendChild(valhallaToolbar);
-
-// ── Panneau résultats (droite) ──
-const multiRoutePanel = document.createElement("div");
-multiRoutePanel.id = "multi-route-panel";
-multiRoutePanel.style.display = "none";
-multiRoutePanel.innerHTML = `
-  <div id="mrp-header">
-    <div style="font-weight:600; font-size:14px; color:#111;">Itinéraires calculés</div>
-    <button id="mrp-close">×</button>
-  </div>
-  <div id="mrp-rows">
-    <div class="mrp-row" id="mrp-row-red">
-      <div class="mrp-service">
-        <span class="mrp-dot-sm" style="background:#e02424;"></span>
-        <span>Pompiers</span>
-      </div>
-      <div class="mrp-result" id="mrp-result-red"><span class="mrp-wait">—</span></div>
-    </div>
-    <div class="mrp-row" id="mrp-row-blue">
-      <div class="mrp-service">
-        <span class="mrp-dot-sm" style="background:#1a56db;"></span>
-        <span>Police</span>
-      </div>
-      <div class="mrp-result" id="mrp-result-blue"><span class="mrp-wait">—</span></div>
-    </div>
-    <div class="mrp-row" id="mrp-row-green">
-      <div class="mrp-service">
-        <span class="mrp-dot-sm" style="background:#057a55;"></span>
-        <span>Hôpital</span>
-      </div>
-      <div class="mrp-result" id="mrp-result-green"><span class="mrp-wait">—</span></div>
-    </div>
-  </div>
-  <div id="mrp-footer">Cliquez à nouveau pour un autre point</div>
-`;
-document.getElementById("map").appendChild(multiRoutePanel);
-
 // ── Logique toolbar ──
-const serviceChecks = document.getElementById("service-checks");
 
 // Le mode itinéraire est toujours actif — curseur crosshair permanent
 map.once("rendercomplete", () => {
@@ -260,12 +197,12 @@ function getSelectedColors() {
 document.getElementById("btn-clear-all").addEventListener("click", () => {
   clearAllRoutes();
   clickMarkerSource.clear();
-  multiRoutePanel.style.display = "none";
+  document.getElementById("multi-route-panel").style.display = "none";
   closePanel();
 });
 
 document.getElementById("mrp-close").addEventListener("click", () => {
-  multiRoutePanel.style.display = "none";
+  document.getElementById("multi-route-panel").style.display = "none";
   clearAllRoutes();
   clickMarkerSource.clear();
 });
@@ -274,12 +211,11 @@ document.getElementById("mrp-close").addEventListener("click", () => {
 document.querySelectorAll(".svc-check").forEach(cb => {
   cb.addEventListener("change", () => {
     const color = cb.dataset.color;
-    // Mettre à jour la visibilité de la ligne dans le panneau résultats
-    const row = document.getElementById(`mrp-row-${color}`);
+    const row   = document.getElementById(`mrp-row-${color}`);
     if (row) row.style.opacity = cb.checked ? "1" : "0.35";
 
     if (cb.checked) {
-      if (lastRouteResults[color]) displayRouteForColor(lastRouteResults[color].coords, color);
+      if (lastRouteResults[color]) displayRouteOnMap(lastRouteResults[color].coords, color);
     } else {
       clearRouteForColor(color);
     }
@@ -298,8 +234,10 @@ async function computeMultiRoutes(fromLv95) {
   clickMarkerSource.clear();
   clickMarkerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(fromLv95) }));
 
+  const multiRoutePanel = document.getElementById("multi-route-panel");
+
   // Reset panneau
-  ["red","blue","green"].forEach(color => {
+  ["red", "blue", "green"].forEach(color => {
     clearRouteForColor(color);
     lastRouteResults[color] = null;
     const row = document.getElementById(`mrp-row-${color}`);
@@ -315,7 +253,7 @@ async function computeMultiRoutes(fromLv95) {
   multiRoutePanel.style.display = "block";
 
   const nSelected = selected.length;
-  let  nDone = 0;
+  let   nDone     = 0;
 
   await Promise.all(selected.map(async color => {
     try {
@@ -335,7 +273,7 @@ async function computeMultiRoutes(fromLv95) {
 
       // Afficher la route seulement si la case est toujours cochée
       const cb = document.querySelector(`.svc-check[data-color="${color}"]`);
-      if (cb?.checked) displayRouteForColor(best.route.coords, color);
+      if (cb?.checked) displayRouteOnMap(best.route.coords, color);
 
       const mins  = Math.round(best.route.time / 60);
       const km    = best.route.distance.toFixed(1);
@@ -363,8 +301,9 @@ map.on("singleclick", async e => {
   await computeMultiRoutes(e.coordinate);
 });
 
+// ── Utilitaire formatage clé ──
 function formatKey(key) {
-  return key.replace(/_/g," ").replace(/([a-z])([A-Z])/g,"$1 $2").replace(/\b\w/g, c => c.toUpperCase());
+  return key.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ── Chargement GeoJSON ──

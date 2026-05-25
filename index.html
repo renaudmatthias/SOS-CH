@@ -39,6 +39,63 @@
         <div id="poi-body"></div>
       </div>
 
+      <!-- Toolbar sélection services + bouton effacer -->
+      <div id="routing-toolbar">
+        <div id="service-checks">
+          <label class="svc-check-label" title="Pompiers">
+            <input type="checkbox" class="svc-check" data-color="red" checked>
+            <span class="svc-dot svc-dot--red"></span>
+            Pompiers
+          </label>
+          <label class="svc-check-label" title="Police">
+            <input type="checkbox" class="svc-check" data-color="blue" checked>
+            <span class="svc-dot svc-dot--blue"></span>
+            Police
+          </label>
+          <label class="svc-check-label" title="Hôpital">
+            <input type="checkbox" class="svc-check" data-color="green" checked>
+            <span class="svc-dot svc-dot--green"></span>
+            Hôpital
+          </label>
+        </div>
+        <button id="btn-clear-all" class="rtool-btn rtool-clear" title="Tout effacer">Effacer</button>
+      </div>
+
+      <!-- Panneau résultats multi-itinéraires -->
+      <div id="multi-route-panel">
+        <div id="mrp-header">
+          <div id="mrp-title">Itinéraires calculés</div>
+          <button id="mrp-close">×</button>
+        </div>
+        <div id="mrp-rows">
+          <div class="mrp-row" id="mrp-row-red">
+            <div class="mrp-service">
+              <span class="mrp-dot-sm mrp-dot-sm--red"></span>
+              <span>Pompiers</span>
+            </div>
+            <div class="mrp-result" id="mrp-result-red"><span class="mrp-wait">—</span></div>
+          </div>
+          <div class="mrp-row" id="mrp-row-blue">
+            <div class="mrp-service">
+              <span class="mrp-dot-sm mrp-dot-sm--blue"></span>
+              <span>Police</span>
+            </div>
+            <div class="mrp-result" id="mrp-result-blue"><span class="mrp-wait">—</span></div>
+          </div>
+          <div class="mrp-row" id="mrp-row-green">
+            <div class="mrp-service">
+              <span class="mrp-dot-sm mrp-dot-sm--green"></span>
+              <span>Hôpital</span>
+            </div>
+            <div class="mrp-result" id="mrp-result-green"><span class="mrp-wait">—</span></div>
+          </div>
+        </div>
+        <div id="mrp-footer">Cliquez à nouveau pour un autre point</div>
+      </div>
+
+      <!-- Toast notifications -->
+      <div id="routing-toast" class="toast-hidden"></div>
+
       <!-- Légende -->
       <div id="map-legend" class="position-absolute bottom-0 start-0 m-3 bg-white rounded-3 shadow-sm p-3 small">
         <div class="d-flex align-items-center gap-2 text-dark mb-2">
@@ -53,12 +110,10 @@
       </div>
 
       <!-- Crédits -->
-      <div class="position-absolute bottom-0 end-0 m-3 bg-white rounded-2 shadow-sm p-2"
-           style="z-index: 1000; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;">
-        <div class="d-flex align-items-center gap-2" style="color: #333;">
-          Reto Lazzeri, Matthias Renaud &amp; Florian Zaccomer
-        </div>
+      <div id="map-credits">
+        Reto Lazzeri, Matthias Renaud &amp; Florian Zaccomer
       </div>
+
     </div>
   </div>
   <script src="script.js"></script>
