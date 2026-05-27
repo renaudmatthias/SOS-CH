@@ -114,7 +114,7 @@ function wgs84ToLv95(coord) { return ol.proj.transform(coord, "EPSG:4326", "EPSG
 
 // ── POI sources ──
 const poiSources = {};
-const CANDIDATES = 5;
+const CANDIDATES = 20;
 
 function getNearestCandidates(lv95Coord, color, n = CANDIDATES) {
   const source = poiSources[color];
