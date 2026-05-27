@@ -27,8 +27,8 @@ const map = new ol.Map({
   view: new ol.View({
     projection,
     center: [2660000, 1190000],
-    zoom: 3,
-    minZoom: 3,
+    zoom: 2.5,
+    minZoom: 2.5,
     extent: [2485000, 1075000, 2834000, 1296000],
     constrainOnlyCenter: true,
   }),
@@ -47,9 +47,9 @@ const selectedStyleMap = {
 const defaultStyleMap = { blue: blueStyle, green: greenStyle, red: redStyle };
 
 const layerTypeMap = {
-  red:   { label: "Caserne de pompiers", emoji: "", color: "#e02424" },
-  blue:  { label: "Poste de police",     emoji: "", color: "#1a56db" },
-  green: { label: "Hôpital",             emoji: "", color: "#057a55" },
+  red:   { label: "Caserne de pompiers",  color: "#e02424" },
+  blue:  { label: "Poste de police", color: "#1a56db" },
+  green: { label: "Hôpital",color: "#057a55" },
 };
 
 // ── DOM panneau POI ──
